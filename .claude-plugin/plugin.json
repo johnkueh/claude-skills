@@ -1,6 +1,6 @@
 {
-  "name": "exa",
-  "description": "Search the web and scrape page contents using Exa API",
+  "name": "claude-skills",
+  "description": "Collection of Claude Code skills: Exa search, DataForSEO keyword research, and SERP analysis",
   "author": {
     "name": "John Kueh"
   }

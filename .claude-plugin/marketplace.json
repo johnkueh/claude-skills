@@ -10,6 +10,18 @@
       "source": "./",
       "description": "Search the web and scrape page contents using Exa API",
       "version": "1.0.0"
+    },
+    {
+      "name": "keyword-data",
+      "source": "./",
+      "description": "DataForSEO keyword research for SEO and content planning",
+      "version": "1.0.0"
+    },
+    {
+      "name": "serp-data",
+      "source": "./",
+      "description": "DataForSEO SERP analysis for geo-targeted search results",
+      "version": "1.0.0"
     }
   ]
 }
