@@ -1,7 +1,10 @@
 {
   "name": "claude-skills",
+  "version": "1.0.0",
   "description": "Collection of Claude Code skills: Exa search, DataForSEO keyword research, and SERP analysis",
   "author": {
-    "name": "John Kueh"
-  }
+    "name": "John Kueh",
+    "url": "https://github.com/johnkueh"
+  },
+  "repository": "https://github.com/johnkueh/claude-skills"
 }
