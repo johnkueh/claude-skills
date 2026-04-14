@@ -1,0 +1,15 @@
+{
+  "name": "johnkueh-skills",
+  "owner": {
+    "name": "John Kueh",
+    "url": "https://github.com/johnkueh"
+  },
+  "plugins": [
+    {
+      "name": "exa",
+      "source": "./",
+      "description": "Search the web and scrape page contents using Exa API",
+      "version": "1.0.0"
+    }
+  ]
+}
