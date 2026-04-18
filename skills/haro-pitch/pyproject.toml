@@ -1,0 +1,9 @@
+[project]
+name = "haro-pitch"
+version = "0.1.0"
+description = "HARO/Qwoted pitch-drafter skill: filter journalist queries, queue drafts, report activity. Claude Code handles the drafting; the CLI handles mechanical parts."
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.0",
+    "python-dateutil>=2.8",
+]
