@@ -12,7 +12,7 @@ Render a structured scene-script JSON into a 1920×1080 MP4 with synced narratio
 ## Setup (one-time)
 
 ```bash
-cd /Users/johnkueh/.claude/plugins/cache/johnkueh-skills/article-to-video/1.0.0/skills/article-to-video
+cd /Users/johnkueh/.claude/plugins/cache/johnkueh-skills/claude-skills/1.0.0/skills/article-to-video
 npm install
 ```
 
