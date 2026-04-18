@@ -7,12 +7,14 @@
   "plugins": [
     {
       "name": "claude-skills",
-      "description": "Collection of Claude Code skills: Exa search, DataForSEO keyword research, and SERP analysis",
+      "description": "Collection of Claude Code skills: Exa search, DataForSEO keyword/SERP research, YouTube transcripts, and article-to-video production.",
       "source": "./",
       "skills": [
         "./skills/exa",
         "./skills/keyword-data",
-        "./skills/serp-data"
+        "./skills/serp-data",
+        "./skills/yt-transcript",
+        "./skills/article-to-video"
       ]
     }
   ]

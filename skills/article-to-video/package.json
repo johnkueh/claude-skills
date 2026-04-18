@@ -1,0 +1,23 @@
+{
+  "name": "article-to-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generic article-to-video pipeline: scene script JSON + reference image → MP4 + SRT. Used via the article-to-video skill.",
+  "scripts": {
+    "studio": "remotion studio remotion/index.ts",
+    "render": "remotion render remotion/index.ts VideoArticle"
+  },
+  "dependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "^4.0.448",
+    "@remotion/captions": "^4.0.448",
+    "@remotion/cli": "^4.0.448",
+    "@remotion/renderer": "^4.0.448",
+    "@types/react": "^19",
+    "remotion": "^4.0.448",
+    "typescript": "^5"
+  }
+}
