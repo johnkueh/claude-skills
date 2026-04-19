@@ -128,6 +128,21 @@ def render(out_dir: str, filename: str):
     run(cmd, cwd=SKILL_DIR)
 
 
+@cli.command()
+@click.option("--script", "script_path", required=True, type=click.Path(exists=True, dir_okay=False))
+@click.option("--out", "out_dir", required=True, type=click.Path(exists=True, file_okay=False))
+@click.option("--source-article-slug", required=True, help="Corresponding glp3.wiki article slug")
+@click.option("--episode-number", required=True, type=int)
+def podcast(script_path: str, out_dir: str, source_article_slug: str, episode_number: int):
+    """Generate podcast artwork (3000x3000 JPG) + shownotes.md from a rendered video."""
+    cmd = ["uv", "run", str(CLI_DIR / "podcast.py"),
+           "--script", script_path,
+           "--out", out_dir,
+           "--source-article-slug", source_article_slug,
+           "--episode-number", str(episode_number)]
+    run(cmd)
+
+
 @cli.command(name="all")
 @click.option("--script", "script_path", required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option("--out", "out_dir", required=True, type=click.Path())
