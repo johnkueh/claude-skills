@@ -63,9 +63,12 @@ export const Scene: React.FC<SceneProps> = ({
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  const currentCaption = captions.find(
-    (c) => currentMs >= c.startMs && currentMs <= c.endMs + 150
-  );
+  // Captions are intentionally NOT burned into the video — YouTube's caption
+  // layer (uploaded SRT) handles them, which enables auto-translation and
+  // user toggling. The captions array remains in props so SRT generation in
+  // cli/build_props.py still has the alignment data.
+  void captions;
+  void currentMs;
 
   const imageSrc = staticFile(`images/${imageFile}`);
   const audioSrc = staticFile(`audio/${audioFile}`);
@@ -155,35 +158,6 @@ export const Scene: React.FC<SceneProps> = ({
         </div>
       </AbsoluteFill>
 
-      {/* Bottom captions */}
-      {currentCaption && (
-        <AbsoluteFill
-          style={{
-            alignItems: "center",
-            justifyContent: "flex-end",
-            paddingBottom: 90,
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 1500,
-              padding: "18px 36px",
-              borderRadius: 8,
-              backgroundColor: "rgba(30, 18, 24, 0.72)",
-              fontFamily: "Inter, -apple-system, Helvetica, sans-serif",
-              fontWeight: 600,
-              fontSize: 44,
-              lineHeight: 1.25,
-              color: "#fdf8f2",
-              textAlign: "center",
-              letterSpacing: 0.2,
-            }}
-          >
-            {currentCaption.text}
-          </div>
-        </AbsoluteFill>
-      )}
     </AbsoluteFill>
   );
 };

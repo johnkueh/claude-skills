@@ -14,7 +14,8 @@
         "./skills/keyword-data",
         "./skills/serp-data",
         "./skills/yt-transcript",
-        "./skills/article-to-video"
+        "./skills/article-to-video",
+        "./skills/video-distribute"
       ]
     }
   ]

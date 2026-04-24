@@ -1,6 +1,6 @@
 ---
 name: article-to-video
-description: Turn a scene-script JSON into a narrated 5-minute video (MP4) with watercolor visuals, burned-in captions, and an SRT file. Uses ElevenLabs TTS (voice narration with word-level timings), Gemini 2.5 Flash Image (Nano Banana) for scene stills, and Remotion for composition. Invoke when the user wants to produce a video from a structured scene script, or says "article to video", "render video", "produce narrated video", or when another skill needs a video render backend.
+description: Turn a scene-script JSON into a narrated 5-minute video (MP4) with watercolor visuals and a matching SRT caption file. Captions are NOT burned into the MP4 — the SRT is uploaded to YouTube's caption layer separately so viewers can toggle + YouTube auto-translates. Uses ElevenLabs TTS (voice narration with word-level timings), Gemini 2.5 Flash Image (Nano Banana) for scene stills, and Remotion for composition. Invoke when the user wants to produce a video from a structured scene script, or says "article to video", "render video", "produce narrated video", or when another skill needs a video render backend.
 ---
 
 # Article-to-Video
