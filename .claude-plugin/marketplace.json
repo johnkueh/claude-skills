@@ -1,0 +1,34 @@
+{
+  "name": "johnkueh-skills",
+  "owner": {
+    "name": "John Kueh",
+    "url": "https://github.com/johnkueh"
+  },
+  "plugins": [
+    {
+      "name": "claude-skills",
+      "description": "Collection of Claude Code skills: Exa search, DataForSEO keyword/SERP research, YouTube transcripts, Vercel logs, expo-local-build (local EAS builds + on-device/over-tunnel delivery), Notion page reader, wacli (WhatsApp CLI), johns-writing-style (John's iMessage/WhatsApp voice), mailchimp-copy-style (Mailchimp-based copy guide for app surfaces + marketing), kole-design-tips (house UI/UX design playbook for app + web surfaces), system-memory-cleanup + system-disk-cleanup (macOS), x-monitor (X/Twitter daily digest), gpt-image-gen-2 (GPT Image 2 illustrations/logos/photoreal with cost logging), and youtube-video-upload.",
+      "source": "./",
+      "skills": [
+        "./skills/exa",
+        "./skills/keyword-data",
+        "./skills/serp-data",
+        "./skills/youtube-transcribe",
+        "./skills/vercel-logs",
+        "./skills/expo-local-build",
+        "./skills/notion-page",
+        "./skills/wacli",
+        "./skills/johns-writing-style",
+        "./skills/slack-search",
+        "./skills/system-memory-cleanup",
+        "./skills/system-disk-cleanup",
+        "./skills/x-monitor",
+        "./skills/instantdb",
+        "./skills/gpt-image-gen-2",
+        "./skills/mailchimp-copy-style",
+        "./skills/kole-design-tips",
+        "./skills/youtube-video-upload"
+      ]
+    }
+  ]
+}

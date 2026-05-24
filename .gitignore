@@ -1,0 +1,22 @@
+**/results/
+**/.venv/
+**/__pycache__/
+*.pyc
+.DS_Store
+**/node_modules/
+**/.next/
+**/dist/
+
+# Python lockfiles for skills — kept local, not part of distribution
+skills/*/uv.lock
+skills/*/pyproject.toml
+
+# Secrets / credentials — prevent accidental commits
+.env
+.env.*
+*.key
+*.pem
+credentials*.json
+*secret*.json
+*token*.json
+*.zip
