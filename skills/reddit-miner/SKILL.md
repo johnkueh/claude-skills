@@ -133,10 +133,3 @@ Reference: a 30-thread `mine` ≈ **1 MB wire ≈ $0.008** at $8/GB (~955 runs p
   Add/rotate a residential proxy; sticky sessions hold one clean IP per run.
 - `fetchJson failed … http 403 / blocked` → challenge expired mid-run; the tool
   retries, and a fresh run re-clears.
-
-## vs comment-mine
-
-`comment-mine reddit` (Python) uses a bare urllib `.json` call → 403 on cloud IPs,
-and only mines comments. `reddit-miner mine` returns the same fields (drop-in),
-works through the block, and also mines post selftext. YouTube mining stays in
-`comment-mine` (`comment-mine youtube …`) — this tool is Reddit-only.
