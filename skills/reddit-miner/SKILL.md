@@ -46,6 +46,54 @@ bun ~/.claude/skills/reddit-miner/cli.ts doctor
 Proxy resolution order: `--proxy` flag → `REDDIT_PROXY` env → `~/.config/reddit-miner/config.json`.
 The proxy secret is never read from or written to the skill repo. Use `--no-proxy` to force direct.
 
+## Setup flow — guide the user through this
+
+When the user first asks to set this up, don't dump manual steps — drive it. Run
+`doctor`, then fix each FAIL yourself (ask before any global install or before
+handling a proxy secret). `<cli>` below is `bun <this-skill-dir>/cli.ts`.
+
+1. **Run `<cli> doctor` first.** It reports each requirement as PASS/FAIL with the
+   exact fix. Work down the failures in order.
+
+2. **`bun runtime` FAIL** → bun isn't installed. Offer to run:
+   ```bash
+   curl -fsSL https://bun.sh/install | bash
+   ```
+
+3. **`agent-browser installed` FAIL** → offer to run:
+   ```bash
+   npm i -g agent-browser
+   ```
+
+4. **`browser engine (Chrome) reachable` FAIL** → agent-browser has no browser to
+   drive. Offer to run (downloads a Chromium it controls; existing Chrome/Brave is
+   auto-detected too):
+   ```bash
+   agent-browser install
+   ```
+
+5. **`proxy credential resolved` is INFO, not a failure.** Ask the user: do they
+   have a residential/ISP proxy? Reddit blocks datacenter IPs, so a cloud/CI box
+   needs one; a clean home IP often works direct.
+   - If yes, take the proxy URL and store it for them — never paste it into the repo:
+     ```bash
+     <cli> setup --proxy "http://user:pass@host:port"
+     ```
+   - If no, tell them it'll run direct and only works from a clean IP. They can add
+     a proxy later with `setup`.
+
+6. **Re-run `<cli> doctor` until it prints `RESULT: READY`.** Don't proceed past a
+   FAIL — a failing engine or a flagged IP means every mine returns nothing.
+
+7. **Smoke test** once READY:
+   ```bash
+   <cli> mine --subreddit <their-subreddit> --threads 5
+   ```
+   Confirm it returns clustered questions and a small bandwidth/cost line.
+
+For convenience, suggest the user alias the CLI:
+`alias reddit-miner='bun <this-skill-dir>/cli.ts'`.
+
 ## Usage
 
 ```bash
