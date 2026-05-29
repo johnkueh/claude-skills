@@ -27,7 +27,8 @@
         "./skills/gpt-image-gen-2",
         "./skills/mailchimp-copy-style",
         "./skills/kole-design-tips",
-        "./skills/youtube-video-upload"
+        "./skills/youtube-video-upload",
+        "./skills/reddit-miner"
       ]
     }
   ]
