@@ -349,6 +349,7 @@ function cmdSetup(proxyArg?: string): number {
   fs.chmodSync(CONFIG_PATH, 0o600);
   console.log(`Saved proxy to ${CONFIG_PATH} (chmod 600): ${mask(proxy)}`);
   console.log("This path is machine-local and outside the skill repo.");
+  console.log("Next: run `reddit-miner doctor` to verify agent-browser, Chrome, and the proxy.");
   return 0;
 }
 
@@ -361,8 +362,24 @@ function cmdDoctor(proxyFlag?: string): number {
   console.log("reddit-miner doctor");
   let abPath = "";
   try { abPath = execFileSync("which", ["agent-browser"], { encoding: "utf8" }).trim(); } catch {}
-  line(!!abPath, "agent-browser installed", abPath || "install: npm i -g agent-browser");
+  line(!!abPath, "agent-browser installed",
+    abPath || "install: npm i -g agent-browser  (then: agent-browser install)");
   line(typeof Bun !== "undefined", "bun runtime", typeof Bun !== "undefined" ? Bun.version : "install: https://bun.sh");
+
+  // browser engine: agent-browser drives Chrome — verify one is actually reachable
+  if (abPath) {
+    let engineOk = false, engineErr = "";
+    try {
+      execFileSync("agent-browser", ["--session", "reddit-miner-engine", "open", "about:blank"],
+        { encoding: "utf8", timeout: 60_000 });
+      const r = execFileSync("agent-browser", ["--session", "reddit-miner-engine", "eval", "1+1", "--json"],
+        { encoding: "utf8", timeout: 30_000 });
+      engineOk = JSON.parse(r)?.success === true;
+      try { execFileSync("agent-browser", ["--session", "reddit-miner-engine", "close"], { timeout: 20_000 }); } catch {}
+    } catch (e: any) { engineErr = String(e?.stderr || e?.message || e).slice(0, 120); }
+    line(engineOk, "browser engine (Chrome) reachable",
+      engineOk ? "ok" : `no browser launched — run: agent-browser install  ${engineErr ? "(" + engineErr + ")" : ""}`);
+  }
 
   const [proxy, source] = resolveProxy(proxyFlag);
   // proxy is OPTIONAL: present = use it; absent = direct (only works from a clean/residential IP)
