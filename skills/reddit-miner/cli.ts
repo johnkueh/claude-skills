@@ -370,10 +370,13 @@ function cmdDoctor(proxyFlag?: string): number {
 
   if (proxy) {
     try {
-      const out = execFileSync("curl", ["-s", "--max-time", "40", "-x", proxy, "https://ip.oxylabs.io/location"],
+      // vendor-neutral IP echo — works through ANY proxy (override via REDDIT_IP_ECHO_URL)
+      const echo = process.env.REDDIT_IP_ECHO_URL ?? "https://ipinfo.io/json";
+      const out = execFileSync("curl", ["-s", "--max-time", "40", "-x", proxy, echo],
         { encoding: "utf8", timeout: 50_000 });
       const info = out.trim().startsWith("{") ? JSON.parse(out) : {};
-      const ip = info.ip, country = info?.providers?.dbip?.country;
+      const ip = info.ip ?? info.query;
+      const country = info.country ?? info.country_code ?? "?";
       line(!!ip, "proxy connectivity", ip ? `exit IP ${ip} (${country})` : "no response through proxy");
     } catch (e) { line(false, "proxy connectivity", String(e)); }
   }
