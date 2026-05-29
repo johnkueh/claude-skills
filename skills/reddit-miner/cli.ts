@@ -40,7 +40,7 @@ const CONFIG_PATH = path.join(os.homedir(), ".config", "reddit-miner", "config.j
 const SESSION = "reddit-miner";
 const BLOCK_MARKER = "blocked by network security";
 
-// ----------------------------- NLP (ported from comment-mine) -----------------------------
+// ----------------------------- NLP: question detection + clustering -----------------------------
 
 const QWORDS =
   /^\s*(what|how|when|why|where|which|who|does|do|is|are|was|were|be|been|being|can|should|would|will|has|have|did|any|anyone|anybody)\b/i;
