@@ -40,9 +40,28 @@ async function firecrawlScrape(url: string, waitForMs: number): Promise<{ text: 
   }
 }
 
+// Firecrawl frequently times out rendering the ChatGPT/Perplexity chat UIs, which
+// would zero out a run. When that happens, fall back to the reliable DataForSEO
+// Google AI Overview citation set for the same query so the run still yields an
+// AI-citation signal. Labelled as a fallback (different surface — Google's AI
+// answer, not the native chatbot) so it isn't mistaken for a true ChatGPT cite.
+// Disable with AEO_DISABLE_DATAFORSEO_FALLBACK=1.
+async function dataForSeoFallback(platform: string, query: string, firecrawlError: string): Promise<ScrapeResult> {
+  const aio = await scrapeGoogleAIOverview(query);
+  return {
+    ...aio,
+    platform,
+    operation: "ai_overview_fallback",
+    metadata: { platform, fallback_provider: "dataforseo-google-ai", firecrawl_error: firecrawlError },
+  };
+}
+
 export async function scrapeChatGPT(query: string, plan = "hobby"): Promise<ScrapeResult> {
   const url = `https://chatgpt.com/?q=${encodeURIComponent(query)}`;
   const { text, error } = await firecrawlScrape(url, 18000);
+  if ((error || !text.trim()) && process.env.AEO_DISABLE_DATAFORSEO_FALLBACK !== "1") {
+    return dataForSeoFallback("chatgpt", query, error ?? "empty result");
+  }
   return {
     text,
     platform: "chatgpt",
@@ -58,6 +77,9 @@ export async function scrapeChatGPT(query: string, plan = "hobby"): Promise<Scra
 export async function scrapePerplexity(query: string, plan = "hobby"): Promise<ScrapeResult> {
   const url = `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`;
   const { text, error } = await firecrawlScrape(url, 12000);
+  if ((error || !text.trim()) && process.env.AEO_DISABLE_DATAFORSEO_FALLBACK !== "1") {
+    return dataForSeoFallback("perplexity", query, error ?? "empty result");
+  }
   return {
     text,
     platform: "perplexity",

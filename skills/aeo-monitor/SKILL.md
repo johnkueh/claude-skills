@@ -124,7 +124,9 @@ Propose, confirm, add. Don't bulk-add without review.
 
 - **Responses vary run to run.** ChatGPT may cite you 1 in 5 times for the same query — that's normal. Citation rates are statistical, not deterministic. Run daily, look at rates over time.
 - **Mobile app traffic strips referrers.** GA4 won't show all AI traffic — many ChatGPT users on mobile land as Direct.
-- **First run is slowest.** ChatGPT/Perplexity scrapes wait 15-18s for streaming responses. Run in parallel (default) cuts wall time.
+- **First run is slowest.** ChatGPT/Perplexity scrapes wait 15-18s for streaming responses.
+- **Concurrency is capped (default 3).** ChatGPT/Perplexity are Firecrawl scrapes; firing every job at once saturates the Firecrawl **hobby** plan's concurrency limit and trips server-side `SCRAPE_TIMEOUT` (408) — a single scrape succeeds in ~15s, so a wall of timeouts means too much parallelism, not a broken URL. Tune with `AEO_CONCURRENCY` (raise it on a paid Firecrawl plan: `aeo config set firecrawl_plan standard`), or `--serial`.
+- **Firecrawl → DataForSEO fallback.** If a ChatGPT/Perplexity scrape still errors or returns empty, the run falls back to the DataForSEO Google-AI-Overview citation set for that query (tagged `operation: ai_overview_fallback`, `metadata.fallback_provider`) so a run never zeroes out. It's a *different surface* (Google's AI answer, not the native chatbot) — treat fallback rows as a proxy. Disable with `AEO_DISABLE_DATAFORSEO_FALLBACK=1`.
 - **`.aeo/` should be gitignored.** It's local data, not source. The skill auto-creates `.aeo/raw/` for debugging — same applies.
 
 ## Architecture notes (for debugging)

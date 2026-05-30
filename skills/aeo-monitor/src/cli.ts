@@ -362,7 +362,17 @@ program
     if (opts.serial) {
       for (const j of jobs) await runOne(j.query, j.platform);
     } else {
-      await Promise.all(jobs.map((j) => runOne(j.query, j.platform)));
+      // Bounded concurrency. Unbounded Promise.all fires every job at once, which
+      // saturates the Firecrawl hobby plan's concurrency limit → server-side
+      // SCRAPE_TIMEOUTs on ChatGPT/Perplexity (a single scrape succeeds in ~15s).
+      // Default 3; tune with AEO_CONCURRENCY, or --serial for one at a time.
+      const limit = Math.max(1, Number(process.env.AEO_CONCURRENCY ?? 3));
+      let next = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(limit, jobs.length) }, async () => {
+          while (next < jobs.length) { const j = jobs[next++]; await runOne(j.query, j.platform); }
+        }),
+      );
     }
 
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
