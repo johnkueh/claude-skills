@@ -173,6 +173,17 @@ function resolveProxy(flag?: string): [string | null, string | null] {
 }
 const mask = (p: string | null) => (p ?? "").replace(/(\/\/[^:]+:)[^@]+(@)/, "$1***$2");
 
+// Sticky proxy sessions (Oxylabs `sessid-…`) expire (~10 min) and then fail with
+// SSL/connection errors mid-run. If the proxy URL carries a sessid, mint a FRESH one
+// per process run — stable within the run (same exit IP → clearance cookie holds),
+// fresh across runs so an unattended cron never inherits a dead session. Stored
+// config is untouched; only the runtime value rotates.
+const RUN_SESSID = `rm${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+function rotateSessid(proxy: string | null): string | null {
+  if (!proxy) return proxy;
+  return proxy.replace(/sessid-[^-:@/]+/i, `sessid-${RUN_SESSID}`);
+}
+
 // ----------------------------- headless browser -----------------------------
 
 class BrowserError extends Error {}
@@ -381,7 +392,8 @@ function cmdDoctor(proxyFlag?: string): number {
       engineOk ? "ok" : `no browser launched — run: agent-browser install  ${engineErr ? "(" + engineErr + ")" : ""}`);
   }
 
-  const [proxy, source] = resolveProxy(proxyFlag);
+  let [proxy, source] = resolveProxy(proxyFlag);
+  if (proxy) { const r = rotateSessid(proxy); if (r !== proxy) { proxy = r; source = `${source} (fresh sessid)`; } }
   // proxy is OPTIONAL: present = use it; absent = direct (only works from a clean/residential IP)
   console.log(`  [INFO] proxy ${proxy ? `configured — ${mask(proxy)} (from ${source})` : "not set — will connect DIRECT (only works from a clean/residential IP; set one via `setup` if you get blocked)"}`);
 
@@ -435,7 +447,11 @@ function main() {
   if (cmd === "doctor") process.exit(cmdDoctor(f.proxy as string | undefined));
 
   const noProxy = f["no-proxy"] === true;
-  const [proxy, source] = noProxy ? [null, null] : resolveProxy(f.proxy as string | undefined);
+  let [proxy, source] = noProxy ? [null, null] : resolveProxy(f.proxy as string | undefined);
+  if (proxy && f["no-rotate"] !== true) {
+    const rotated = rotateSessid(proxy);
+    if (rotated !== proxy) { proxy = rotated; source = `${source} (fresh sessid)`; }
+  }
   console.error(proxy
     ? `[reddit-miner] proxy from ${source}: ${mask(proxy)}`
     : "[reddit-miner] no proxy — connecting direct (works only from a clean/residential IP)");

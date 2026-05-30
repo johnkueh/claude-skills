@@ -111,6 +111,15 @@ bun ~/.claude/skills/reddit-miner/cli.ts mine --subreddit Retatrutide --time mon
 `--sort`: `top|hot|new|rising|controversial` (`--time` applies to `top`/`controversial`).
 `--keep-open`: leave the browser session running for inspection.
 `--no-proxy`: force a direct connection even if a proxy is configured.
+`--no-rotate`: keep the proxy's stored `sessid` instead of minting a fresh one (see below).
+
+## Sticky-session auto-rotation
+
+Oxylabs-style sticky sessions (`sessid-…-sesstime-N`) expire (~10 min) and then fail
+with SSL/connection errors mid-run — fatal for an unattended cron. If the proxy URL
+carries a `sessid-`, the tool **mints a fresh sessid per run** (stable within the run
+so the clearance cookie holds; fresh across runs so a stale session is never inherited).
+The stored config is untouched. Pass `--no-rotate` to keep a fixed sessid.
 
 ## Output
 
