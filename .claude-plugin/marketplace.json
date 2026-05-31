@@ -28,7 +28,8 @@
         "./skills/mailchimp-copy-style",
         "./skills/kole-design-tips",
         "./skills/youtube-video-upload",
-        "./skills/reddit-miner"
+        "./skills/reddit-miner",
+        "./skills/icon-search"
       ]
     }
   ]
