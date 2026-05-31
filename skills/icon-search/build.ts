@@ -8,14 +8,22 @@
  * Each catalog/<set>.json is IconRecord[]; manifest.json carries SetMeta + counts.
  */
 
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SOURCES } from "./sources.ts";
-import type { SetMeta } from "./lib.ts";
+import { dedupeLower, type SetMeta } from "./lib.ts";
 
 const SKILL_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT = join(SKILL_DIR, "catalog");
+const ALTNAMES = join(SKILL_DIR, "altnames");
+
+/** LLM-generated synonyms per icon (from the web app's enrichment) — folded into
+ *  keywords so concept search works on the keyword-poor libraries (e.g. Heroicons). */
+function loadAltnames(setId: string): Record<string, string[]> {
+  const f = join(ALTNAMES, `${setId}.json`);
+  return existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : {};
+}
 
 async function main() {
   if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
@@ -31,6 +39,14 @@ async function main() {
       console.error(`  ✗ ${src.meta.id} — build failed: ${e.message} (is its package installed?)`);
       continue;
     }
+    // Fold LLM alt-names into each icon's keywords (search-recall boost).
+    const alt = loadAltnames(src.meta.id);
+    let enriched = 0;
+    for (const r of records) {
+      const a = alt[r.name];
+      if (a?.length) { r.keywords = dedupeLower([...r.keywords, ...a]); enriched++; }
+    }
+
     // Split: a small SEARCH index (committed, zero-setup) + heavy RENDER data
     // (gitignored build artifact, needed only for preview + the web box).
     const search = records.map((r) => ({
@@ -45,7 +61,7 @@ async function main() {
     writeFileSync(join(OUT, `${src.meta.id}.render.json`), JSON.stringify(render));
     manifest.sets.push({ ...src.meta, count: records.length });
     total += records.length;
-    console.error(`  ✓ ${src.meta.id.padEnd(10)} ${String(records.length).padStart(5)} icons  (${Date.now() - t0}ms)`);
+    console.error(`  ✓ ${src.meta.id.padEnd(10)} ${String(records.length).padStart(5)} icons  (+${enriched} alt-names, ${Date.now() - t0}ms)`);
   }
 
   writeFileSync(join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2));
