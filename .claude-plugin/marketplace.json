@@ -4,33 +4,134 @@
     "name": "John Kueh",
     "url": "https://github.com/johnkueh"
   },
+  "metadata": {
+    "description": "John Kueh's Claude Code skills. Install the whole collection in one command, or add any single skill on its own."
+  },
   "plugins": [
     {
       "name": "claude-skills",
-      "description": "Collection of Claude Code skills: Exa search, DataForSEO keyword/SERP research, YouTube transcripts, Vercel logs, expo-local-build (local EAS builds + on-device/over-tunnel delivery), Notion page reader, wacli (WhatsApp CLI), johns-writing-style (John's iMessage/WhatsApp voice), mailchimp-copy-style (Mailchimp-based copy guide for app surfaces + marketing), kole-design-tips (house UI/UX design playbook for app + web surfaces), system-memory-cleanup + system-disk-cleanup (macOS), x-monitor (X/Twitter daily digest), gpt-image-gen-2 (GPT Image 2 illustrations/logos/photoreal with cost logging), and youtube-video-upload.",
-      "source": "./",
-      "skills": [
-        "./skills/exa",
-        "./skills/keyword-data",
-        "./skills/serp-data",
-        "./skills/youtube-transcribe",
-        "./skills/vercel-logs",
-        "./skills/expo-local-build",
-        "./skills/notion-page",
-        "./skills/wacli",
-        "./skills/johns-writing-style",
-        "./skills/slack-search",
-        "./skills/system-memory-cleanup",
-        "./skills/system-disk-cleanup",
-        "./skills/x-monitor",
-        "./skills/instantdb",
-        "./skills/gpt-image-gen-2",
-        "./skills/mailchimp-copy-style",
-        "./skills/kole-design-tips",
-        "./skills/youtube-video-upload",
-        "./skills/reddit-miner",
-        "./skills/icon-search"
-      ]
+      "description": "The full collection of John Kueh's Claude Code skills in one install: research (Exa, DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, iOS device, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
+      "source": "./"
+    },
+    {
+      "name": "aeo-monitor",
+      "description": "Track AI chatbot citations (ChatGPT, Perplexity, Google AI Overview, Claude) for any project. Use when the user wants to monitor brand/domain mentions in AI search, track which queries cite their site, set up AEO/GEO monitoring, or measure visibility in chatbot responses. Triggers on \"track AI citations\", \"monitor ChatGPT mentions\", \"AEO monitoring\", \"GEO tracking\", \"AI search visibility\", \"are we cited in ChatGPT\", \"what do chatbots say about us\", \"track mentions in Perplexity\", or any project-level question about appearing in AI answers.",
+      "source": "./plugins/aeo-monitor"
+    },
+    {
+      "name": "cloudflare-tunnel-portless",
+      "description": "Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `metro-takeover.sh` for switching Expo Metro between git worktrees and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on \"set up cloudflare tunnel\", \"ngrok replacement\", \"public URL for localhost\", \"portless\", \"cloudflared\", \"metro-takeover\", \"switch metro to worktree\", \"tunnel doctor\", \"add project to tunnel\", \"onboard new mac to tunnel\", or \"debug caddy/portless/cloudflared\".",
+      "source": "./plugins/cloudflare-tunnel-portless"
+    },
+    {
+      "name": "daily-digest",
+      "description": "Per-project daily digest of new signups, top user activities, API/LLM costs, and recently-changed initiative docs — pulled from bq-analytics where available, plus git activity and the latest x-monitor run. Use when the user wants a \"morning digest\" across their projects, says \"give me yesterday's roundup\", or asks for a recurring summary across your projects. Designed to be invoked daily via `/loop`.",
+      "source": "./plugins/daily-digest"
+    },
+    {
+      "name": "exa",
+      "description": "Search the web and scrape page contents using Exa API. Find URLs via neural/keyword search, then extract clean text, highlights, and summaries. Use when the user wants to search the web, find pages, scrape content, extract text, or fetch articles. Triggers on \"search for\", \"find pages about\", \"scrape\", \"extract content\", \"get page text\", \"fetch article\", or \"pull content from URL\".",
+      "source": "./plugins/exa"
+    },
+    {
+      "name": "expo-local-build",
+      "description": "Serve locally-built Expo IPAs/APKs from this Mac to a phone over the Cloudflare tunnel. The skill owns the install-page + tunnel ingress wiring; each project owns its own `eas build --local` invocation via package.json `:local` scripts. Triggers on \"serve the build\", \"install page\", \"send build to phone\", \"deliver expo build\", \"expo install URL\", \"publish IPA\", \"ad-hoc install page\".",
+      "source": "./plugins/expo-local-build"
+    },
+    {
+      "name": "gpt-image-gen-2",
+      "description": "Generate images, illustrations, logos, infographics, photoreal shots, UI mockups, and ads with OpenAI's GPT Image 2. Translates the user's loose request into a cookbook-aligned prompt, supports reference images / moodboards for style transfer, and logs token usage + actual $ cost per call. Triggers on \"make me a logo\", \"generate an image of…\", \"create an illustration\", \"design a poster\", \"gpt-image-gen\", \"gpt image\", \"image generation\", \"moodboard\", \"style transfer from this image\", or any visual asset request.",
+      "source": "./plugins/gpt-image-gen-2"
+    },
+    {
+      "name": "icon-search",
+      "description": "Find the right icon across many icon libraries (Lucide, Phosphor, Tabler, Heroicons, HugeIcons — 14k+ icons, more coming) using natural language, and get a paste-ready, per-package React import + JSX back. Scopes to the icon sets a project actually installed (no hallucinated names), with an instant local fuzzy pass and a Gemini Flash semantic pass for concept/synonym queries (\"vegetarian\", \"delete a recipe\"). Always appends icon-selection heuristics (NN/g, WCAG). Optional PNG contact-sheet preview. Triggers on \"find an icon for\", \"which icon\", \"icon for X\", \"search icons\", \"what icon should I use\".",
+      "source": "./plugins/icon-search"
+    },
+    {
+      "name": "instantdb",
+      "description": "Build complete, functional React, vanilla JS, or Expo apps with InstantDB as the realtime backend. Use when the user has explicitly chosen InstantDB, asks for a quick realtime/collaborative prototype, or wants a local-first multiplayer app. Triggers on \"instantdb\", \"instant database\", \"instant.db\", \"realtime collab app\", \"multiplayer prototype\", \"local-first app\", \"build app with instant\", or when the user pastes an InstantDB app ID / schema and asks for an app around it.",
+      "source": "./plugins/instantdb"
+    },
+    {
+      "name": "ios-device",
+      "description": "Interact with a physically paired iPhone/iPad over the wireless CoreDevice tunnel — stream app console output, gather a sysdiagnose, list processes, copy files in and out of an app sandbox, send Darwin notifications, trigger memory warnings, reboot. Use when the user wants to debug, inspect, or poke at a real iOS device (not a simulator). Triggers on \"device logs\", \"iphone logs\", \"logs from my phone\", \"devicectl\", \"device console\", \"sysdiagnose\", \"real device debug\", \"app crash on device\", \"pull file off iphone\", \"push file to iphone\", \"memory warning\", \"reboot iphone\".",
+      "source": "./plugins/ios-device"
+    },
+    {
+      "name": "johns-writing-style",
+      "description": "How John writes in iMessage / WhatsApp. Use whenever drafting a reply that will be sent as John, including DMs, group chats, and outbound messages composed by skills like text-contact. Captures vocabulary, length, punctuation, register-switching, and what to avoid. Derived from John's actual WhatsApp outbound history (2024+). Triggers on \"draft a reply\", \"reply as John\", \"reply to this WhatsApp / iMessage / text\", \"send a WhatsApp\", \"message X back\", \"sound like me\", \"in my voice\", \"John's voice\", \"John's writing style\", or any task that produces text going out under John's name.",
+      "source": "./plugins/johns-writing-style"
+    },
+    {
+      "name": "keyword-data",
+      "description": "DataForSEO keyword research for SEO and content planning. Get search volume, search intent, keyword difficulty, CPC, and keyword suggestions. Use for keyword research, content planning, and SEO strategy. Supports --dry-run to preview costs before executing. Triggers on \"keyword research\", \"search volume\", \"keyword difficulty\", \"CPC for\", \"keyword ideas for\", \"keyword suggestions\", \"long-tail keywords\", \"what do people search for\", \"search intent for\", or \"SEO opportunity for [topic]\".",
+      "source": "./plugins/keyword-data"
+    },
+    {
+      "name": "kole-design-tips",
+      "description": "House UI/UX design playbook distilled from Kole Jain's design tutorials. Use whenever designing or reviewing an app/website interface — dashboards, mobile screens, landing pages, settings, modals, empty states, charts, micro-interactions, or pricing pages. Covers typography, color, spacing, dark mode, components, motion, mobile patterns, dashboard structure, presentation, and the \"vibe-coded\" smell test. Triggers on \"design this screen\", \"review this UI\", \"make this look professional\", \"fix this dashboard\", \"improve this layout\", \"color palette\", \"dark mode\", \"spacing\", \"rounded corners\", \"font size\", \"Figma\", \"mobile screen\", \"bottom sheet\", \"empty state\", \"micro-interaction\", \"looks AI-generated\", \"make this less generic\", or \"vibe coded\".",
+      "source": "./plugins/kole-design-tips"
+    },
+    {
+      "name": "mailchimp-copy-style",
+      "description": "House copy style guide adapted from Mailchimp. Use whenever writing or reviewing copy for app surfaces (UI strings, buttons, errors, empty states, onboarding, push notifications) and for websites, marketing pages, App Store descriptions, release notes, and emails. Covers voice, tone, grammar, microcopy, accessibility, and inclusive-language rules. Triggers on \"house style\", \"copy style\", \"write copy\", \"rewrite this\", \"review this string\", \"button text\", \"error message\", \"empty state\", \"onboarding copy\", \"UI copy\", \"microcopy\", \"push notification\", \"release notes\", \"App Store copy\", \"email subject\", or \"style guide\".",
+      "source": "./plugins/mailchimp-copy-style"
+    },
+    {
+      "name": "notion-page",
+      "description": "Read the full content of a Notion page from a URL or page ID. Returns title, metadata, and the page body as markdown. Use when the user pastes a Notion link or asks to read, summarize, or extract content from a Notion page. Triggers on notion.so URLs, \"read this notion page\", \"fetch from notion\", \"what's in this notion doc\".",
+      "source": "./plugins/notion-page"
+    },
+    {
+      "name": "reddit-miner",
+      "description": "Pull structured data from Reddit (posts, threads, comments, and question clusters) through a headless browser that bypasses Reddit's JS bot-challenge. Use when Reddit's public .json API is 403-blocked from a server/cloud IP, or when mining a subreddit for content gaps, questions, or post data. Triggers on \"mine reddit\", \"reddit-miner\", \"scrape subreddit\", \"reddit questions\", \"reddit 403\", \"reddit blocked\", \"pull reddit posts/comments\".",
+      "source": "./plugins/reddit-miner"
+    },
+    {
+      "name": "serp-data",
+      "description": "DataForSEO SERP analysis for geo-targeted search result analysis. See who ranks for keywords in specific locations (Australia, US, UK, etc.), identify content gaps, analyze SERP features (featured snippets, PAA), and find competitor domains. Supports --dry-run to preview costs. Triggers on \"who ranks for\", \"SERP analysis\", \"search results for\", \"Google results for [keyword]\", \"competitors for [keyword]\", \"featured snippet\", \"people also ask\", \"ranking domains\", \"top 10 for\", or \"SERP features\".",
+      "source": "./plugins/serp-data"
+    },
+    {
+      "name": "slack-search",
+      "description": "Search Slack messages and fetch threads. Use when the user asks to find Slack conversations, look up a colleague, list channels, or pull a specific thread by URL. Personal-token-based (xoxp-...). Triggers on \"search Slack\", \"find that Slack thread\", \"what did X say in Slack\", \"Slack DM history\", \"pull this Slack URL\", \"who in [channel]\", \"Slack message about\", \"look up [name] on Slack\", or any Slack permalink (slack.com/archives/...).",
+      "source": "./plugins/slack-search"
+    },
+    {
+      "name": "system-disk-cleanup",
+      "description": "Scan and clean up disk space on macOS. Use when the user asks about disk space, storage, freeing up space, cleaning their Mac, or mentions their disk is full. Triggers on requests like \"check disk space\", \"free up space\", \"what's using my disk\", \"clean up my Mac\", \"disk is full\", or \"storage hogs\".",
+      "source": "./plugins/system-disk-cleanup"
+    },
+    {
+      "name": "system-memory-cleanup",
+      "description": "Monitor and clean up system resources on macOS. Use when the user wants to check CPU/memory usage, find resource hogs, kill orphaned processes, or free up system resources. Triggers on requests like \"what's using CPU\", \"memory hogs\", \"clean up processes\", \"kill Chrome\", \"system slow\", or \"activity monitor\".",
+      "source": "./plugins/system-memory-cleanup"
+    },
+    {
+      "name": "vercel-logs",
+      "description": "Query Vercel runtime and build logs to debug production issues. PREFER THE CLI over the MCP for log search — the MCP runtime-logs tool truncates message bodies. Use when debugging a production error, investigating a 500 / 4xx, looking at deployment build output, or any 'what happened on Vercel' question. Triggers on 'vercel logs', 'production error', 'vercel debug', 'deployment logs', 'build logs', 'what's failing in prod', 'check vercel'.",
+      "source": "./plugins/vercel-logs"
+    },
+    {
+      "name": "wacli",
+      "description": "Read and send WhatsApp messages from the command line via wacli (steipete/wacli, whatsmeow-based). Use when the user asks to search WhatsApp messages, send a WhatsApp message, list chats/groups/contacts, look up a thread, or download WhatsApp media. Triggers on 'WhatsApp', 'wacli', 'send a wa message', 'find that WhatsApp thread', 'WA chats', 'who said X on WhatsApp'.",
+      "source": "./plugins/wacli"
+    },
+    {
+      "name": "x-monitor",
+      "description": "Monitor X (Twitter) profiles for new posts and emit daily digest summaries. Use when the user wants to subscribe to an X handle (e.g. https://x.com/bcherny), poll for new posts, run a recurring digest via /loop, query past posts from the local archive, or set up the skill on a new machine. Triggers on \"monitor X handle\", \"watch this twitter user\", \"x-monitor\", \"subscribe to twitter\", \"daily digest of @user\", \"what did @user say about X\", \"set up x-monitor\", \"configure x-monitor\", \"install x-monitor on this Mac\", or \"share x-monitor across my machines\".",
+      "source": "./plugins/x-monitor"
+    },
+    {
+      "name": "youtube-transcribe",
+      "description": "Transcribe YouTube videos. Tries auto/manual captions first via yt-dlp; if they're missing or empty, downloads audio and transcribes with Gemini 2.5 Flash. Use when processing YouTube URLs for content, fact-checking, or research. Triggers on YouTube URLs, \"get transcript\", \"fetch captions\", \"youtube transcript\", or \"transcribe this video\".",
+      "source": "./plugins/youtube-transcribe"
+    },
+    {
+      "name": "youtube-video-upload",
+      "description": "Upload a rendered explainer video to YouTube programmatically via the YouTube Data API v3. Uploads the MP4, SRT captions, a Gemini-generated thumbnail, sets privacy + AI-content disclosure, adds to a playlist, and pins a comment linking back to the source article. Triggers on \"upload to YouTube\", \"publish to YouTube\", \"youtube upload\", \"upload mp4 to youtube\", \"set youtube thumbnail\", \"schedule youtube video\", \"youtube data api\", \"add captions to youtube\", or \"publish video\".",
+      "source": "./plugins/youtube-video-upload"
     }
   ]
 }
