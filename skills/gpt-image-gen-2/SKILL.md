@@ -7,7 +7,11 @@ description: Generate images, illustrations, logos, infographics, photoreal shot
 
 Turn the user's loose visual brief into a well-engineered GPT Image 2 prompt, generate the asset, and log cost. Built around OpenAI's official prompting guide — see `PROMPTING.md` in this directory for the full distilled cookbook.
 
-**Setup:** API key in `~/.config/image-gen/env` as `export OPENAI_API_KEY=sk-…`, or exported in shell. Usage log at `~/.config/image-gen/usage.jsonl`.
+**Setup:** TypeScript CLI (`cli.ts`) — run `pnpm install` in this directory once (needs Node.js ≥ 18). Auth either way:
+- **API key** (default): in `~/.config/image-gen/env` as `export OPENAI_API_KEY=sk-…`, or exported in shell.
+- **ChatGPT plan** (default when signed in): no API key — bills your ChatGPT Plus/Pro quota. Run `pnpm exec tsx cli.ts setup` once to sign in; after that it's used automatically unless you pass `--api`. See the auth section below.
+
+Usage log at `~/.config/image-gen/usage.jsonl`.
 
 ## Your job
 
@@ -16,7 +20,7 @@ Turn the user's loose visual brief into a well-engineered GPT Image 2 prompt, ge
 2. **Interview** the user for anything missing. Ask one short message — no questionnaires. The critical fields by category are listed below.
 3. **Assemble** the prompt using the structure in `PROMPTING.md`: Scene → Subject → Details → Composition → Constraints. Quote literal text. Spell tricky words letter-by-letter.
 4. **Show the user the final prompt + estimated cost** (`--dry-run` first if you're unsure).
-5. **Call** `cli.py generate` or `cli.py edit` and report the actual cost.
+5. **Call** `cli.ts generate` or `cli.ts edit` and report the actual cost.
 6. **Iterate small.** Single-change edits — "change only X, keep everything else the same" — and repeat the preserve list each turn (per the cookbook's anti-drift rule).
 
 If the user already provided a complete brief, skip step 2.
@@ -39,7 +43,7 @@ Run from this skill's base directory.
 ### Generate (text → image)
 
 ```bash
-uv run python cli.py generate \
+pnpm exec tsx cli.ts generate \
   -p "Original logo for Field & Flour, a local bakery. Warm, simple, timeless. Clean vector-like shapes, strong silhouette, balanced negative space. Flat design, minimal strokes, no gradients. Single centered mark with generous padding, plain background." \
   --size 1024x1024 --quality high --format png --out ./field-and-flour.png
 ```
@@ -47,20 +51,28 @@ uv run python cli.py generate \
 ### Generate (dry run — see prompt + cost estimate without spending)
 
 ```bash
-uv run python cli.py generate -p "..." --quality high --dry-run
+pnpm exec tsx cli.ts generate -p "..." --quality high --dry-run
 ```
 
 ### Generate transparent (sticker / icon / empty-state art)
 
 `gpt-image-2` dropped native transparent backgrounds — its `background` enum
 only accepts `auto` and `opaque` now (the model was trained for scene
-consistency, not isolated cut-outs). The `--transparent` flag works around it:
-auto-appends a magenta-bg instruction block to your prompt, forces opaque
-output, then post-processes the saved PNG to alpha out the magenta. Standard
-chroma-key trick for sticker / cut-out assets.
+consistency, not isolated cut-outs). Confirmed for the ChatGPT-plan/Responses
+path too: requesting `background: "transparent"` returns
+`"Transparent background is not supported for this model."` — it's a model
+limitation, not an API-surface one. So `--transparent` works around it on both
+routes: auto-appends a magenta-bg instruction block to your prompt, forces
+opaque output, then keys out the magenta.
+
+The keyer is a proper **soft matte + decontamination + despill** (not a hard
+threshold), so anti-aliased edges stay clean instead of leaving a pink halo:
+edge pixels get partial alpha, then their true colour is recovered by un-mixing
+the known magenta background (`fg = (observed − (1−α)·magenta) / α`), and any
+residual magenta cast on opaque pixels is shaved off.
 
 ```bash
-uv run python cli.py generate \
+pnpm exec tsx cli.ts generate \
   -p "Hand-illustrated watercolor still-life of a vintage red postbox with a single white envelope peeking out the slot. Soft warm lantern-yellow rim light. Centered single subject, ~70% of canvas. NO text or labels." \
   --size 1024x1024 --quality high --transparent --out ./postbox.png
 ```
@@ -69,29 +81,32 @@ The chroma-key is also exposed as a standalone command if you want to
 strip a key color from an existing image:
 
 ```bash
-uv run python cli.py chroma-key ./input.png -o ./output.png
-uv run python cli.py chroma-key ./input.png --key-color FF00FF --tolerance 70
+pnpm exec tsx cli.ts chroma-key ./input.png -o ./output.png
+# tune: --lo (keep more, raise toward 0.3) / --hi (cut more, lower toward 0.45) / --despill 0-1
+pnpm exec tsx cli.ts chroma-key ./input.png --lo 0.18 --hi 0.55 --despill 0.8
 ```
 
-**Prompt the subject to avoid pure magenta.** Brand coral `#FF5A5F` is safe
-(RGB distance² ≈ 33k, well above the default threshold of 14,700). True
-hot-pink subjects will get partially keyed — recolor or raise tolerance.
+**Prompt the subject to avoid pure magenta.** The keyer flags a pixel as
+background by its magenta coverage `m = (min(R,B) − G)/255`, so greens, browns,
+yellows, and whites are safe; only genuinely magenta/hot-pink subject areas get
+keyed. If a subject edge is being eaten, raise `--lo`; if magenta survives in
+corners, lower `--hi`.
 
 ### Edit / style-transfer / moodboard (image(s) + prompt → image)
 
 ```bash
 # Single ref
-uv run python cli.py edit \
+pnpm exec tsx cli.ts edit \
   -p "Remove the flower from the man's hand. Do not change anything else — preserve face, pose, lighting, background, camera angle." \
   --ref input.png --out ./edited.png
 
 # Style transfer — reference by index in the prompt
-uv run python cli.py edit \
+pnpm exec tsx cli.ts edit \
   -p "Image 1 is a style reference; Image 2 is the subject. Apply the watercolor brushwork, muted palette, and paper texture of Image 1 to the scene in Image 2. Keep Image 2's composition and subject pose unchanged." \
   --ref style-ref.jpg --ref subject.png --out ./styled.png
 
 # Moodboard (multiple refs for vibe, new content)
-uv run python cli.py edit \
+pnpm exec tsx cli.ts edit \
   -p "Use the mood, palette, and lighting from these reference images. Generate a new scene: <subject>. Do not copy any subjects from the references; only their style." \
   --ref mood1.jpg --ref mood2.jpg --ref mood3.jpg --out ./new.png
 ```
@@ -99,10 +114,70 @@ uv run python cli.py edit \
 ### Cost log
 
 ```bash
-uv run python cli.py cost              # total + per-mode + per-day summary
-uv run python cli.py cost --tail 10    # last 10 calls
-uv run python cli.py cost --days 7     # last 7 days only
+pnpm exec tsx cli.ts cost              # total + per-mode + per-day summary
+pnpm exec tsx cli.ts cost --tail 10    # last 10 calls
+pnpm exec tsx cli.ts cost --days 7     # last 7 days only
 ```
+
+### Auth: ChatGPT plan by default, API key as fallback
+
+The CLI **defaults to your ChatGPT plan** whenever `~/.codex/auth.json` exists
+(no `$` charge — bills plan quota). If it's not signed in, it falls back to the
+`OPENAI_API_KEY` path automatically. Override per call:
+- `--chatgpt-auth` — force the ChatGPT-plan path.
+- `--api` — force the API-key path even when ChatGPT auth is present (e.g. for bulk/scripted runs where you'd rather pay than burn plan quota).
+
+The ChatGPT-plan path routes through the local
+[`openai-oauth`](https://www.npmjs.com/package/openai-oauth) proxy and the
+Responses API `image_generation` tool (gpt-image-2 inside the model's reasoning
+loop), the same mechanism Codex itself uses.
+
+**One-time setup** — sign in with your ChatGPT account (caches the token at `~/.codex/auth.json`) and verify:
+
+```bash
+pnpm exec tsx cli.ts setup     # runs `npx @openai/codex login` + doctor
+pnpm exec tsx cli.ts doctor    # re-check anytime (npx, auth, proxy reachability)
+```
+
+If you skip `setup`, the first `--chatgpt-auth` call auto-runs the login itself. Then just add the flag — the `openai-oauth` proxy is auto-started:
+
+```bash
+pnpm exec tsx cli.ts generate -p "Flat vector logo for a bakery, warm and simple" --chatgpt-auth
+pnpm exec tsx cli.ts edit -p "Make the sky a warm sunset, keep everything else" --ref photo.png --chatgpt-auth
+```
+
+- `--model` — `gpt-5.5` (default, strongest reasoning), `gpt-5.4`, `gpt-5.4-mini`. The model drives the `image_generation` tool's planning; higher tiers use more quota.
+- `--reasoning` — effort for that planning: `none|low|medium|high|xhigh` (default `medium`).
+- `--web-search` — off by default (keeps the prompt verbatim + faster); enable for real-person/factual accuracy.
+- `--oauth-port` — proxy port (default `10531`).
+- `--transparent` works (post-process chroma-key). `--mask` and `--n > 1` are **not** supported on this path.
+
+**Trade-offs vs. the API-key path:**
+- No `$` cost, but image turns burn your Codex/ChatGPT plan limit **~3–5× faster** than text turns. Logged with `cost_usd: 0, plan_quota: true`.
+- For **bulk/scripted** generation, use the API key (or Gemini) instead — heavy use will exhaust the rolling-window plan quota.
+- The endpoint is **undocumented** and can change without notice. Personal use only.
+
+**Unattended / background use (when Claude drives the skill).** After the one-time
+`codex login`, the token auto-refreshes — no recurring login. The only remaining
+gate is Claude Code's permission prompt when the agent spawns the `openai-oauth`
+proxy. To run hands-off, add this once to your **own** `.claude/settings.json`
+(a plugin can't grant itself shell permissions — you must opt in):
+
+```jsonc
+"permissions": {
+  "allow": [
+    "Bash(npx -y openai-oauth:*)",
+    "Bash(npx openai-oauth:*)",
+    "Bash(npx -y @openai/codex:*)",
+    "Bash(npx @openai/codex:*)"
+  ]
+}
+```
+
+With that in place: login persists + proxy auto-spawns silently → recurring
+background generation with zero interaction. The only non-interactive stops are
+plan-quota exhaustion or the upstream endpoint changing. (Running the CLI
+yourself in a plain terminal needs none of this — the prompt is Claude-Code-only.)
 
 ## Options reference
 
@@ -110,10 +185,15 @@ uv run python cli.py cost --days 7     # last 7 days only
 - `--quality` — `low` (drafts, $0.008/1024² img), `medium` ($0.032), `high` ($0.125, default), `auto`
 - `--format` — `png` (default), `webp`, `jpeg`
 - `--background` — `auto`, `opaque`. (`transparent` is documented by the API but rejected by gpt-image-2; use `--transparent` instead.)
-- `--transparent` / `-t` — opaque magenta render + chroma-key post-process → transparent PNG. Sticker / icon / empty-state use cases.
-- `--n` — number of variations (default 1)
+- `--transparent` / `-t` — opaque magenta render + soft-matte/despill keyer → clean transparent PNG. Sticker / icon / empty-state use cases. Works on both auth paths.
+- `--n` — number of variations (default 1; ignored on the ChatGPT-plan path, which returns 1 per call)
 - `--dry-run` — print prompt + cost estimate, don't call API
 - `--no-open` — don't auto-open the result in Preview
+
+**Auth (see auth section):**
+- *(default)* — ChatGPT plan if `~/.codex/auth.json` exists, else API key
+- `--chatgpt-auth` — force ChatGPT-plan path · `--api` — force API-key path
+- `--model` (`gpt-5.5`|`gpt-5.4`|`gpt-5.4-mini`) · `--reasoning` (`none`..`xhigh`, default `medium`) · `--web-search` · `--oauth-port`
 
 ## Pricing (logged automatically)
 
