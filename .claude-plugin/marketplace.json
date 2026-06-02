@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "claude-skills",
-      "description": "The full collection of John Kueh's Claude Code skills in one install: research (Exa, DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, iOS device, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, veo-video-gen, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
+      "description": "The full collection of John Kueh's Claude Code skills in one install: research (Exa, DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, iOS device, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
       "source": "./"
     },
     {
@@ -62,6 +62,11 @@
       "name": "johns-writing-style",
       "description": "How John writes in iMessage / WhatsApp. Use whenever drafting a reply that will be sent as John, including DMs, group chats, and outbound messages composed by skills like text-contact. Captures vocabulary, length, punctuation, register-switching, and what to avoid. Derived from John's actual WhatsApp outbound history (2024+). Triggers on \"draft a reply\", \"reply as John\", \"reply to this WhatsApp / iMessage / text\", \"send a WhatsApp\", \"message X back\", \"sound like me\", \"in my voice\", \"John's voice\", \"John's writing style\", or any task that produces text going out under John's name.",
       "source": "./plugins/johns-writing-style"
+    },
+    {
+      "name": "julian-storytelling-tips",
+      "description": "House storytelling playbook distilled from Julian Shapiro's \"How to tell great stories.\" Use whenever you're writing or shaping anything that should land as a story rather than a list of facts — talk and pitch scripts, demo narration, founder/origin stories, launch announcements, blog and essay intros, \"about\" pages, case studies, video scripts, sales narratives, or any moment where you need to hook attention and make people feel something. Triggers on \"tell a story\", \"storytelling\", \"make this compelling\", \"hook\", \"intro\", \"opening\", \"narrative\", \"pitch\", \"founder story\", \"origin story\", \"talk script\", \"keynote\", \"demo script\", \"case study\", \"this is boring\", \"make them care\", \"raise the stakes\", or \"how do I open this\".",
+      "source": "./plugins/julian-storytelling-tips"
     },
     {
       "name": "keyword-data",
