@@ -119,13 +119,38 @@ pnpm exec tsx cli.ts cost --tail 10    # last 10 calls
 pnpm exec tsx cli.ts cost --days 7     # last 7 days only
 ```
 
+### Batch — many images in parallel (ChatGPT plan)
+
+Generate a whole set from a JSON manifest, running up to **8 at a time** against a
+single shared `openai-oauth` proxy (no per-image proxy churn). This is the way to
+do bulk generation on the free plan path.
+
+```bash
+pnpm exec tsx cli.ts batch --manifest images.json --concurrency 5
+```
+
+`images.json` is an array of items; each needs `prompt` + `out` (`size`/`quality`/`format` optional):
+
+```json
+[
+  { "prompt": "Photorealistic editorial photograph: ...", "out": "public/images/a.webp" },
+  { "prompt": "...", "out": "public/images/b.webp", "size": "1536x1024", "quality": "high" }
+]
+```
+
+- `--concurrency <1-8>` — parallel generations (default 4; capped at 8).
+- `--skip-existing` — skip items whose `out` already exists, so a re-run **resumes** and retries only failures.
+- `--size` / `--quality` / `--format` — defaults for items that omit them; `--model` / `--reasoning` / `--oauth-port` as in `generate`.
+
+Prints a JSON summary `{ ok, failed, failures[] }`. A failed item isn't written, so re-running with `--skip-existing` retries only the misses.
+
 ### Auth: ChatGPT plan by default, API key as fallback
 
 The CLI **defaults to your ChatGPT plan** whenever `~/.codex/auth.json` exists
 (no `$` charge — bills plan quota). If it's not signed in, it falls back to the
 `OPENAI_API_KEY` path automatically. Override per call:
 - `--chatgpt-auth` — force the ChatGPT-plan path.
-- `--api` — force the API-key path even when ChatGPT auth is present (e.g. for bulk/scripted runs where you'd rather pay than burn plan quota).
+- `--api` — force the API-key path even when ChatGPT auth is present.
 
 The ChatGPT-plan path routes through the local
 [`openai-oauth`](https://www.npmjs.com/package/openai-oauth) proxy and the
@@ -153,8 +178,8 @@ pnpm exec tsx cli.ts edit -p "Make the sky a warm sunset, keep everything else" 
 - `--transparent` works (post-process chroma-key). `--mask` and `--n > 1` are **not** supported on this path.
 
 **Trade-offs vs. the API-key path:**
-- No `$` cost, but image turns burn your Codex/ChatGPT plan limit **~3–5× faster** than text turns. Logged with `cost_usd: 0, plan_quota: true`.
-- For **bulk/scripted** generation, use the API key (or Gemini) instead — heavy use will exhaust the rolling-window plan quota.
+- No `$` cost; usage is logged with `cost_usd: 0, plan_quota: true`.
+- For **bulk** generation, use `batch` (below) — it parallelizes the plan path across one shared proxy.
 - The endpoint is **undocumented** and can change without notice. Personal use only.
 
 **Unattended / background use (when Claude drives the skill).** After the one-time

@@ -588,58 +588,29 @@ interface ChatgptAuthOpts {
   reasoning: string;
 }
 
-async function chatgptAuthImage(o: ChatgptAuthOpts): Promise<void> {
-  err(`Prompt (${o.prompt.length} chars):`);
-  err(o.prompt);
-  err(
-    `  auth: ChatGPT plan quota (no $ charge; image turns burn your Codex limit ` +
-      `~3-5x faster than text). model=${o.model}, reasoning=${o.reasoning}, web_search=${o.webSearch}`,
-  );
-  if (o.dryRun) {
-    console.log(
-      JSON.stringify(
-        {
-          dry_run: true,
-          auth: "chatgpt-oauth",
-          model: o.model,
-          reasoning: o.reasoning,
-          size: o.size,
-          quality: o.quality,
-          web_search: o.webSearch,
-          mode: o.mode,
-        },
-        null,
-        2,
-      ),
-    );
-    return;
-  }
-
-  const proc = await ensureOauthProxy(o.oauthPort);
+// Core generate-one. Assumes the openai-oauth proxy is already running on
+// o.oauthPort (caller owns its lifecycle). Generates, writes files, logs usage,
+// and returns the saved paths + elapsed seconds. Safe to call concurrently
+// against a single shared proxy (this is what `batch` does).
+async function chatgptAuthImageCore(o: ChatgptAuthOpts): Promise<{ saved: string[]; elapsed: number }> {
   const t0 = Date.now();
-  let images: string[];
-  let usage: Record<string, unknown>;
-  try {
-    ({ images, usage } = await runImageViaResponses(
-      o.prompt,
-      o.size,
-      o.quality,
-      o.model,
-      o.webSearch,
-      o.refs,
-      o.oauthPort,
-      o.reasoning,
-    ));
-  } finally {
-    proc?.kill();
-  }
+  const { images, usage } = await runImageViaResponses(
+    o.prompt,
+    o.size,
+    o.quality,
+    o.model,
+    o.webSearch,
+    o.refs,
+    o.oauthPort,
+    o.reasoning,
+  );
   const elapsed = (Date.now() - t0) / 1000;
 
+  const { writeFileSync } = await import("node:fs");
   const saved: string[] = [];
   for (let i = 0; i < images.length; i++) {
     const target = targetPath(o.out, o.prompt, o.fmt, i, images.length);
     mkdirSync(dirname(target), { recursive: true });
-    const { writeFileSync } = await import("node:fs");
     writeFileSync(target, Buffer.from(images[i], "base64"));
     if (o.transparent) {
       const [cleared, total] = await chromaKeyFile(target, target);
@@ -667,9 +638,47 @@ async function chatgptAuthImage(o: ChatgptAuthOpts): Promise<void> {
     oauth_usage: usage,
   });
 
-  err(`  done: plan quota (${elapsed.toFixed(1)}s)`);
-  for (const s of saved) console.log(s);
-  if (saved.length && o.open) openFile(saved[0]);
+  return { saved, elapsed };
+}
+
+async function chatgptAuthImage(o: ChatgptAuthOpts): Promise<void> {
+  err(`Prompt (${o.prompt.length} chars):`);
+  err(o.prompt);
+  err(
+    `  auth: ChatGPT plan quota (no $ charge). model=${o.model}, ` +
+      `reasoning=${o.reasoning}, web_search=${o.webSearch}`,
+  );
+  if (o.dryRun) {
+    console.log(
+      JSON.stringify(
+        {
+          dry_run: true,
+          auth: "chatgpt-oauth",
+          model: o.model,
+          reasoning: o.reasoning,
+          size: o.size,
+          quality: o.quality,
+          web_search: o.webSearch,
+          mode: o.mode,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  const proc = await ensureOauthProxy(o.oauthPort);
+  let result: { saved: string[]; elapsed: number };
+  try {
+    result = await chatgptAuthImageCore(o);
+  } finally {
+    proc?.kill();
+  }
+
+  err(`  done: plan quota (${result.elapsed.toFixed(1)}s)`);
+  for (const s of result.saved) console.log(s);
+  if (result.saved.length && o.open) openFile(result.saved[0]);
 }
 
 function validateChoice(name: string, value: string, choices: string[]): string {
@@ -859,6 +868,145 @@ async function saveB64Images(
   }
   return saved;
 }
+
+program
+  .command("batch")
+  .description(
+    "Generate many images in parallel on the ChatGPT plan from a JSON manifest " +
+      "(concurrency up to 8, sharing one oauth proxy). No $ charge.",
+  )
+  .requiredOption(
+    "--manifest <file>",
+    'JSON array of items: { "prompt": "...", "out": "path.png", "size"?, "quality"?, "format"? }.',
+  )
+  .option("--concurrency <n>", "Parallel generations, 1-8 (default 4).", (v) => parseInt(v, 10), 4)
+  .option("--quality <q>", "Default quality when an item omits it.", "high")
+  .option("--size <size>", "Default size when an item omits it.", "auto")
+  .option("--format <fmt>", "Default format when an item omits it.", "png")
+  .option("--skip-existing", "Skip items whose out file already exists (resume a partial run).")
+  .addOption(
+    new Option("--model <model>", "Reasoning model (default gpt-5.5, strongest).")
+      .choices(OAUTH_MODELS)
+      .default("gpt-5.5"),
+  )
+  .addOption(
+    new Option("--reasoning <effort>", "Reasoning effort (higher = better planning).")
+      .choices(OAUTH_REASONING)
+      .default("medium"),
+  )
+  .option("--web-search", "Allow web_search (off by default).")
+  .option("--oauth-port <port>", "openai-oauth proxy port.", (v) => parseInt(v, 10), OAUTH_DEFAULT_PORT)
+  .option("--dry-run", "Print the plan and exit.")
+  .action(async (opts) => {
+    if (!codexAuthPresent()) {
+      die("batch runs on the ChatGPT plan path. Run `image-gen setup` to sign in first.", 2);
+    }
+
+    let raw: string;
+    try {
+      raw = readFileSync(opts.manifest, "utf8");
+    } catch {
+      die(`Cannot read manifest: ${opts.manifest}`, 2);
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      die(`Manifest is not valid JSON: ${opts.manifest}`, 2);
+      return;
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      die("Manifest must be a non-empty JSON array of { prompt, out } items.", 2);
+      return;
+    }
+
+    const items = (parsed as any[]).map((it, i) => {
+      if (!it || typeof it.prompt !== "string" || typeof it.out !== "string") {
+        die(`manifest[${i}] must have string "prompt" and "out".`, 2);
+      }
+      const size = it.size ?? opts.size;
+      const quality = it.quality ?? opts.quality;
+      const fmt = it.format ?? opts.format;
+      validateChoice("size", size, SIZES);
+      validateChoice("quality", quality, QUALITIES);
+      validateChoice("format", fmt, FORMATS);
+      return { prompt: it.prompt as string, out: it.out as string, size, quality, fmt };
+    });
+
+    let conc = opts.concurrency;
+    if (Number.isNaN(conc) || conc < 1) conc = 1;
+    if (conc > 8) {
+      err("concurrency capped at 8.");
+      conc = 8;
+    }
+
+    const work = opts.skipExisting ? items.filter((it) => !existsSync(it.out)) : items;
+    err(
+      `batch: ${work.length}/${items.length} image(s) · concurrency ${conc} · ` +
+        "ChatGPT plan (no $ charge)",
+    );
+    if (work.length === 0) {
+      console.log(JSON.stringify({ ok: 0, failed: 0, skipped: items.length, failures: [] }, null, 2));
+      return;
+    }
+    if (opts.dryRun) {
+      console.log(
+        JSON.stringify(
+          { dry_run: true, count: work.length, concurrency: conc, outs: work.map((w) => w.out) },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    // One shared proxy for the whole run; workers reuse it via oauthPort.
+    const proc = await ensureOauthProxy(opts.oauthPort);
+    let ok = 0;
+    let fail = 0;
+    const failures: Array<{ out: string; error: string }> = [];
+    try {
+      let idx = 0;
+      const runner = async () => {
+        while (idx < work.length) {
+          const it = work[idx++];
+          try {
+            const { saved, elapsed } = await chatgptAuthImageCore({
+              mode: "generate",
+              prompt: it.prompt,
+              size: it.size,
+              quality: it.quality,
+              model: opts.model,
+              webSearch: !!opts.webSearch,
+              refs: [],
+              fmt: it.fmt,
+              out: it.out,
+              transparent: false,
+              open: false,
+              oauthPort: opts.oauthPort,
+              dryRun: false,
+              reasoning: opts.reasoning,
+            });
+            ok++;
+            err(`  [${ok + fail}/${work.length}] ✓ ${saved[0]} (${elapsed.toFixed(1)}s)`);
+          } catch (e) {
+            fail++;
+            const msg = String((e as Error)?.message ?? e);
+            failures.push({ out: it.out, error: msg });
+            err(`  [${ok + fail}/${work.length}] ✗ ${it.out} — ${msg.slice(0, 140)}`);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(conc, work.length) }, runner));
+    } finally {
+      proc?.kill();
+    }
+
+    err(`batch done: ${ok} ok, ${fail} failed. Re-run with --skip-existing to retry failures.`);
+    console.log(JSON.stringify({ ok, failed: fail, failures }, null, 2));
+    if (fail > 0) process.exitCode = 1;
+  });
 
 program
   .command("edit")
