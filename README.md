@@ -61,6 +61,7 @@ These are the ones that earned a permanent spot in my setup. They lean on real k
 |---|---|
 | [`icon-search`](skills/icon-search) | Find the right icon across Lucide, Phosphor, Tabler, Heroicons, and HugeIcons by describing it, and get the exact React import back. |
 | [`gpt-image-gen-2`](skills/gpt-image-gen-2) | Generate logos, illustrations, photoreal shots, UI mockups, and ads with GPT Image 2 — with cost logged per call. |
+| [`veo-video-gen`](skills/veo-video-gen) | Generate cinematic videos with Veo 3.1 (text/image→video) — pairs with a GPT Image still, quotes exact per-second cost up front, true-loop + web MP4/WebM/poster output. |
 | [`kole-design-tips`](skills/kole-design-tips) | A house UI/UX playbook for reviewing app and web screens — typography, spacing, dark mode, motion, the "looks AI-generated" smell test. |
 | [`mailchimp-copy-style`](skills/mailchimp-copy-style) | A house copy guide for UI strings, errors, empty states, onboarding, and marketing — voice, tone, and microcopy. |
 | [`youtube-video-upload`](skills/youtube-video-upload) | Upload a finished video to YouTube through the Data API. |
