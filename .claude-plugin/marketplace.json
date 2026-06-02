@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "claude-skills",
-      "description": "The full collection of John Kueh's Claude Code skills in one install: research (Exa, DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, iOS device, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
+      "description": "The full collection of John Kueh's Claude Code skills in one install: research (Exa, DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, iOS device, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, veo-video-gen, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
       "source": "./"
     },
     {
@@ -107,6 +107,11 @@
       "name": "system-memory-cleanup",
       "description": "Monitor and clean up system resources on macOS. Use when the user wants to check CPU/memory usage, find resource hogs, kill orphaned processes, or free up system resources. Triggers on requests like \"what's using CPU\", \"memory hogs\", \"clean up processes\", \"kill Chrome\", \"system slow\", or \"activity monitor\".",
       "source": "./plugins/system-memory-cleanup"
+    },
+    {
+      "name": "veo-video-gen",
+      "description": "Generate cinematic videos with Google's Veo 3.1 (Gemini API) — text→video and image→video, pairing with the gpt-image-gen-2 still as the first frame. Quotes the exact $ cost before every call (flat per-second), supports true-loop (first=last frame) and web-ready MP4/WebM/poster output, and bakes in the play-once hero pattern and RAI-wording guidance. Triggers on \"generate a video\", \"veo\", \"animate this image\", \"image to video\", \"cinematic hero video\", \"make a background video\", \"loop this image\", \"video from a still\", or any motion/clip request.",
+      "source": "./plugins/veo-video-gen"
     },
     {
       "name": "vercel-logs",
