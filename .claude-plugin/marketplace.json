@@ -64,11 +64,6 @@
       "source": "./plugins/johns-writing-style"
     },
     {
-      "name": "julian-storytelling-tips",
-      "description": "House storytelling playbook distilled from Julian Shapiro's \"How to tell great stories.\" Use whenever you're writing or shaping anything that should land as a story rather than a list of facts — talk and pitch scripts, demo narration, founder/origin stories, launch announcements, blog and essay intros, \"about\" pages, case studies, video scripts, sales narratives, or any moment where you need to hook attention and make people feel something. Triggers on \"tell a story\", \"storytelling\", \"make this compelling\", \"hook\", \"intro\", \"opening\", \"narrative\", \"pitch\", \"founder story\", \"origin story\", \"talk script\", \"keynote\", \"demo script\", \"case study\", \"this is boring\", \"make them care\", \"raise the stakes\", or \"how do I open this\".",
-      "source": "./plugins/julian-storytelling-tips"
-    },
-    {
       "name": "keyword-data",
       "description": "DataForSEO keyword research for SEO and content planning. Get search volume, search intent, keyword difficulty, CPC, and keyword suggestions. Use for keyword research, content planning, and SEO strategy. Supports --dry-run to preview costs before executing. Triggers on \"keyword research\", \"search volume\", \"keyword difficulty\", \"CPC for\", \"keyword ideas for\", \"keyword suggestions\", \"long-tail keywords\", \"what do people search for\", \"search intent for\", or \"SEO opportunity for [topic]\".",
       "source": "./plugins/keyword-data"
