@@ -322,12 +322,29 @@ Inspect what portless thinks via `portless list`.
 
 #### Worktrees
 
-Portless auto-prepends the git branch name as a subdomain prefix in worktrees. A worktree of `my-project` on branch `feature-auth` becomes:
+`portless run` auto-prepends the branch as a **nested** subdomain — a worktree of
+`my-project` on branch `feature-auth` becomes `feature-auth.my-project.localhost`
+/ `.<DOMAIN>`. That works **locally**, but **breaks over the tunnel**: Cloudflare's
+free Universal SSL only certs `<DOMAIN>` + `*.<DOMAIN>` (one level), so a two-deep
+host like `feature-auth.my-project.<DOMAIN>` has **no TLS cert** — HTTPS fails the
+handshake (curl `000`). A deeper `*.my-project.<DOMAIN>` DNS record resolves but
+still has no cert without paid Advanced Certificate Manager.
 
-- **Local:** `http://feature-auth.my-project.localhost:1355`
-- **Public:** `https://feature-auth.my-project.<DOMAIN>`
+**Use flat, single-label worktree hosts instead** — they're covered by the
+existing `*.<DOMAIN>` cert. Run the worktree's dev server with the **direct**
+portless form (which does *not* nest), naming it `<branch>-<project>`:
 
-(Cloudflare's `*.<DOMAIN>` wildcard CNAME only matches a single label, so deeper subdomains like `feature-auth.my-project.<DOMAIN>` need either a wildcard at that depth or the public URL ends up matching `*.<DOMAIN>` only for one-level. **If multi-level worktree URLs don't resolve publicly, add `*.my-project.<DOMAIN>` to the tunnel:** `cloudflared tunnel route dns -f dev "*.my-project.<DOMAIN>"`.)
+```bash
+portless feature-auth-my-project bun dev   # -> https://feature-auth-my-project.<DOMAIN>
+```
+
+(`portless <name> <cmd>` gives exactly `<name>.localhost` — no worktree prefix —
+unlike `portless run`. So you control the flat name.)
+
+**Cross-origin artifact origins (e.g. Marky's `art-<host>` iframe) work too:**
+`art-feature-auth-my-project.<DOMAIN>` is still a single label, so it's cert-covered,
+and `pubproxy` routes an unregistered `art-<name>` host to `<name>`'s server (it
+strips the `art-` prefix as a fallback). No extra portless entry per worktree.
 
 #### Converting an existing project to portless
 
