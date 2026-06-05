@@ -44,8 +44,13 @@ function lookupPort(hostHeader) {
   if (!host.endsWith(TLD_SUFFIX)) return null;
   const name = host.slice(0, -TLD_SUFFIX.length);
   if (!name) return null;
-  const target = name + ".localhost";
-  const r = readRoutes().find((r) => r.hostname === target);
+  const routes = readRoutes();
+  let r = routes.find((r) => r.hostname === name + ".localhost");
+  // Cross-origin artifact host: an app may serve a sandboxed iframe from a sibling
+  // origin prefixed `art-` (e.g. Marky's `art-<app>.<tld>` → `<app>`'s server).
+  // When that host isn't separately registered, fall back to the parent app, so
+  // the pattern works over the wildcard tunnel with no extra portless entry.
+  if (!r && name.startsWith("art-")) r = routes.find((x) => x.hostname === name.slice(4) + ".localhost");
   return r ? r.port : null;
 }
 
