@@ -4,6 +4,7 @@
 import json
 import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -23,16 +24,30 @@ HEADERS = {
 
 COST_PER_PAGE = 0.001
 
+# Exponential backoff: retry only transient statuses, 3 attempts, 2^attempt seconds.
+RETRY_STATUSES = {429, 503, 504}
+MAX_ATTEMPTS = 3
+
 
 def api_post(endpoint: str, data: dict) -> dict:
-    """Make a POST request to Exa API."""
+    """Make a POST request to Exa API with retry on 429/503/504."""
     if not API_KEY:
         click.echo("Error: EXA_API_KEY environment variable is not set", err=True)
         sys.exit(1)
     url = f"{API_BASE}/{endpoint}"
-    resp = requests.post(url, headers=HEADERS, json=data, timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        resp = requests.post(url, headers=HEADERS, json=data, timeout=30)
+        if resp.status_code in RETRY_STATUSES and attempt < MAX_ATTEMPTS:
+            delay = 2 ** attempt
+            click.echo(
+                f"HTTP {resp.status_code} from Exa — retrying in {delay}s "
+                f"(attempt {attempt}/{MAX_ATTEMPTS})...",
+                err=True,
+            )
+            time.sleep(delay)
+            continue
+        resp.raise_for_status()
+        return resp.json()
 
 
 def auto_save(data: dict, label: str = "") -> Path:
