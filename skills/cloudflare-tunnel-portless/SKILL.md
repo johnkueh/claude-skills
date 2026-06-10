@@ -1,11 +1,55 @@
 ---
 name: cloudflare-tunnel-portless
-description: Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `metro-takeover.sh` for switching Expo Metro between git worktrees and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
+description: Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on "dev-up", "spin up the dev server", "start the dev server", "test before shipping", "public URL for this worktree", "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
 ---
 
 # Cloudflare Tunnel + portless
 
 Replaces ngrok with a free Cloudflare Tunnel + a tiny Caddy host-rewriter in front of [portless](https://github.com/vercel-labs/portless). One persistent tunnel handles every web project under a single wildcard subdomain. Expo apps get individual ingress entries.
+
+## dev-up / dev-down / dev-status — START HERE for day-to-day use
+
+Once the machine setup below exists, agents and humans should not assemble the
+workflow by hand. Three commands (symlinked into `~/.local/bin` from `dev.sh`
+in this skill) own the whole lifecycle:
+
+```bash
+dev-up        # from anywhere inside any checkout or worktree
+dev-down      # stop what dev-up started here (or: dev-down <name>, --all, --force)
+dev-status    # infra health + every route, local + public URLs
+```
+
+`dev-up` does, in order: detect the repo root, surface (`web/`, repo root, or
+Expo `app/`) and whether this is a worktree → ensure the tunnel chain is alive
+(kickstarts launchd agents) → **seed env into worktrees** (copies `.env*` from
+the main checkout, or runs the project's `scripts/dev-env-seed.sh` if present)
+→ `pnpm install` if `node_modules` is missing → start the server under
+portless with the right name → wait for ready → probe the public URL → print:
+
+```
+✓ feature-x-drafty-web up
+  Local:   http://feature-x-drafty-web.localhost:1355  (direct: http://127.0.0.1:4123)
+  Public:  https://feature-x-drafty-web.jkyf.dev
+  Log:     ~/.dev-up/feature-x-drafty-web/server.log
+  Stop:    dev-down feature-x-drafty-web
+```
+
+Naming: main checkout → the portless name from the `dev` script (`portless
+<name> …`), or the package.json name for `portless run`, or the repo dir
+basename for plain dev scripts (which dev-up wraps in portless automatically).
+Worktree → `<branch>-<name>`, flat single label so the wildcard TLS cert
+covers it. Override with `DEVUP_NAME`. TLD comes from the pubproxy LaunchAgent
+(`DEVUP_TLD` to override).
+
+In an Expo `app/` dir, `dev-up` delegates to `metro-takeover.sh` (kills any
+Metro on the project's pinned port, starts this worktree's, emits the
+dev-client deeplink). Convention: `pnpm dev` in Expo apps is **simulator-local**
+(no tunnel env, survives tunnel outages); `pnpm dev:phone` is the tunnel
+variant for physical-device testing via `<project>-app.<DOMAIN>`.
+
+Safety: `dev-down` only kills processes dev-up started (pidfile under
+`~/.dev-up/<name>/`); for servers started by hand it refuses unless `--force`.
+`dev-up` is idempotent — if the route is already live it just reprints the URLs.
 
 ## Architecture
 
@@ -537,6 +581,9 @@ Cloudflare Tunnel + Caddy support WebSockets natively. If HMR doesn't work, chec
 ~/Library/LaunchAgents/com.<short-tag>.pubproxy.plist     # pubproxy daemon
 ~/Library/LaunchAgents/com.cloudflare.cloudflared.plist   # cloudflared daemon
 <this-skill>/pubproxy.js                                  # the proxy script itself
+<this-skill>/dev.sh                                       # dev-up/dev-down/dev-status (symlinked in ~/.local/bin)
 <this-skill>/metro-takeover.sh                            # Expo Metro worktree switcher
 <this-skill>/doctor.sh                                    # health check
+
+~/.dev-up/<name>/                                         # per-server pidfile + log (dev-up state)
 ```
