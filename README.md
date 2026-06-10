@@ -33,6 +33,7 @@ These are the ones that earned a permanent spot in my setup. They lean on real k
 | [`keyword-data`](skills/keyword-data) | DataForSEO keyword research — search volume, intent, difficulty, CPC, and suggestions for content planning. |
 | [`serp-data`](skills/serp-data) | Geo-targeted SERP analysis — who ranks where, content gaps, and features like featured snippets and PAA. |
 | [`aeo-monitor`](skills/aeo-monitor) | Track which AI chatbots (ChatGPT, Perplexity, Google AI Overview, Claude) cite a project, and how that moves. |
+| [`ai-crawler-report`](skills/ai-crawler-report) | See which AI bots (GPTBot, ClaudeBot, PerplexityBot, ...) crawl your Vercel sites and which paths they hit. |
 | [`youtube-transcribe`](skills/youtube-transcribe) | Get a clean transcript from any YouTube video for research, fact-checking, or content. |
 | [`notion-page`](skills/notion-page) | Read a Notion page from its URL and return the body as markdown. |
 
