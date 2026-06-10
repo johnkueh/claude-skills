@@ -25,7 +25,7 @@
     },
     {
       "name": "cloudflare-tunnel-portless",
-      "description": "Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `metro-takeover.sh` for switching Expo Metro between git worktrees and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on \"set up cloudflare tunnel\", \"ngrok replacement\", \"public URL for localhost\", \"portless\", \"cloudflared\", \"metro-takeover\", \"switch metro to worktree\", \"tunnel doctor\", \"add project to tunnel\", \"onboard new mac to tunnel\", or \"debug caddy/portless/cloudflared\".",
+      "description": "Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on \"dev-up\", \"spin up the dev server\", \"start the dev server\", \"test before shipping\", \"public URL for this worktree\", \"set up cloudflare tunnel\", \"ngrok replacement\", \"public URL for localhost\", \"portless\", \"cloudflared\", \"metro-takeover\", \"switch metro to worktree\", \"tunnel doctor\", \"add project to tunnel\", \"onboard new mac to tunnel\", or \"debug caddy/portless/cloudflared\".",
       "source": "./plugins/cloudflare-tunnel-portless"
     },
     {

@@ -17,6 +17,12 @@
  * Skills are enumerated from `git ls-files`, so untracked work-in-progress skills
  * never leak into a published manifest until they're committed.
  *
+ * Shared code: each skill dir must stay self-contained when shipped as a
+ * single plugin, so cross-skill modules live canonically in `scripts/shared/`
+ * and are SYNCED (copied with a generated-file header) into each consuming
+ * skill dir by this script. Edit the canonical file, rerun this script, and
+ * commit the synced copies alongside it.
+ *
  * Usage:  bun scripts/build-marketplace.ts
  * Verify: claude plugin validate --strict .
  */
@@ -46,6 +52,29 @@ function frontmatterField(md: string, key: string): string {
   const line = block[1].match(new RegExp(`^${key}:\\s*(.*)$`, "m"));
   if (!line) throw new Error(`missing "${key}" in frontmatter`);
   return line[1].trim().replace(/^["']|["']$/g, "");
+}
+
+// Sync canonical shared modules into their consuming skill dirs so each skill
+// stays self-contained when distributed as a single plugin.
+const SHARED_MODULES: Array<{ canonical: string; targets: string[] }> = [
+  {
+    canonical: "scripts/shared/dataforseo.py",
+    targets: [
+      "skills/keyword-data/dataforseo.py",
+      "skills/serp-data/dataforseo.py",
+    ],
+  },
+];
+
+for (const { canonical, targets } of SHARED_MODULES) {
+  const content = readFileSync(join(root, canonical), "utf8");
+  const header =
+    `# GENERATED FILE — synced from ${canonical} by scripts/build-marketplace.ts.\n` +
+    `# Do not edit here: edit the canonical file, then run \`bun scripts/build-marketplace.ts\`.\n`;
+  for (const target of targets) {
+    writeFileSync(join(root, target), header + content);
+  }
+  console.log(`Synced ${canonical} -> ${targets.join(", ")}`);
 }
 
 // Committed skills only — keeps untracked WIP out of the published manifest.

@@ -18,6 +18,7 @@ import json as json_module
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -41,6 +42,29 @@ except ImportError:
 _user_cache: dict[str, dict] = {}
 
 DEFAULT_DOWNLOAD_ROOT = Path.home() / ".cache" / "slack-search" / "files"
+
+# Exponential backoff: retry only transient statuses, 3 attempts, 2^attempt seconds.
+RETRY_STATUSES = {429, 503, 504}
+MAX_ATTEMPTS = 3
+
+
+def call_with_retry(api_call, **kwargs):
+    """Invoke a slack_sdk client method, retrying on HTTP 429/503/504."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            return api_call(**kwargs)
+        except SlackApiError as e:
+            status = getattr(e.response, "status_code", None)
+            if status in RETRY_STATUSES and attempt < MAX_ATTEMPTS:
+                delay = 2 ** attempt
+                print(
+                    f"HTTP {status} from Slack — retrying in {delay}s "
+                    f"(attempt {attempt}/{MAX_ATTEMPTS})...",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+                continue
+            raise
 
 
 def get_client() -> WebClient:
@@ -70,7 +94,7 @@ def resolve_user(client: WebClient, user_id: str) -> str:
     if user_id in _user_cache:
         return _user_cache[user_id].get("name", user_id)
     try:
-        info = client.users_info(user=user_id).get("user", {})
+        info = call_with_retry(client.users_info, user=user_id).get("user", {})
         _user_cache[user_id] = info
         return info.get("name", user_id)
     except SlackApiError:
@@ -209,7 +233,7 @@ def search_messages(query: str, channel: Optional[str], from_user: Optional[str]
         q += f" from:{from_user}"
 
     try:
-        result = client.search_messages(query=q, count=limit, sort="timestamp")
+        result = call_with_retry(client.search_messages, query=q, count=limit, sort="timestamp")
     except SlackApiError as e:
         print(f"Error: {e.response['error']}", file=sys.stderr)
         if e.response["error"] == "missing_scope":
@@ -276,7 +300,7 @@ def fetch_thread(target: str, as_json: bool, download: Optional[str]) -> None:
     channel, ts = parse_thread_target(target)
     client = get_client()
     try:
-        result = client.conversations_replies(channel=channel, ts=ts, limit=200)
+        result = call_with_retry(client.conversations_replies, channel=channel, ts=ts, limit=200)
     except SlackApiError as e:
         print(f"Error: {e.response['error']}", file=sys.stderr)
         sys.exit(1)
@@ -332,10 +356,10 @@ def fetch_thread(target: str, as_json: bool, download: Optional[str]) -> None:
 def list_channels(limit: int, as_json: bool) -> None:
     client = get_client()
     try:
-        public = client.conversations_list(types="public_channel", limit=limit,
-                                           exclude_archived=True).get("channels", [])
-        private = client.conversations_list(types="private_channel", limit=limit,
-                                            exclude_archived=True).get("channels", [])
+        public = call_with_retry(client.conversations_list, types="public_channel", limit=limit,
+                                 exclude_archived=True).get("channels", [])
+        private = call_with_retry(client.conversations_list, types="private_channel", limit=limit,
+                                  exclude_archived=True).get("channels", [])
     except SlackApiError as e:
         print(f"Error: {e.response['error']}", file=sys.stderr)
         sys.exit(1)
@@ -367,7 +391,7 @@ def list_channels(limit: int, as_json: bool) -> None:
 def list_users(limit: int, as_json: bool) -> None:
     client = get_client()
     try:
-        members = client.users_list(limit=limit).get("members", [])
+        members = call_with_retry(client.users_list, limit=limit).get("members", [])
     except SlackApiError as e:
         print(f"Error: {e.response['error']}", file=sys.stderr)
         sys.exit(1)
@@ -398,8 +422,8 @@ def list_users(limit: int, as_json: bool) -> None:
 def get_my_info(as_json: bool) -> None:
     client = get_client()
     try:
-        auth = client.auth_test()
-        user = client.users_info(user=auth.get("user_id", "")).get("user", {})
+        auth = call_with_retry(client.auth_test)
+        user = call_with_retry(client.users_info, user=auth.get("user_id", "")).get("user", {})
     except SlackApiError as e:
         print(f"Error: {e.response['error']}", file=sys.stderr)
         sys.exit(1)

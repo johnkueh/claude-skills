@@ -3,7 +3,6 @@
 
 import csv
 import json
-import os
 import sys
 from collections import Counter
 from datetime import datetime
@@ -12,16 +11,8 @@ from pathlib import Path
 import click
 import requests
 
-API_AUTH = os.environ.get("DATAFORSEO_API_KEY", "")
-API_BASE = "https://api.dataforseo.com/v3"
-
-# Results directory
-RESULTS_DIR = Path(__file__).parent / "results"
-
-HEADERS = {
-    "Authorization": f"Basic {API_AUTH}",
-    "Content-Type": "application/json",
-}
+import dataforseo
+from dataforseo import RESULTS_DIR, api_get, confirm_cost
 
 # Cost estimates per endpoint
 COSTS = {
@@ -40,36 +31,13 @@ LOCATIONS = {
 
 
 def api_post(endpoint: str, data: list) -> dict:
-    """Make a POST request to DataForSEO API."""
-    url = f"{API_BASE}/{endpoint}"
-    resp = requests.post(url, headers=HEADERS, json=data, timeout=120)
-    resp.raise_for_status()
-    return resp.json()
-
-
-def api_get(endpoint: str) -> dict:
-    """Make a GET request to DataForSEO API."""
-    url = f"{API_BASE}/{endpoint}"
-    resp = requests.get(url, headers=HEADERS, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
+    """POST to DataForSEO with the longer timeout SERP endpoints need."""
+    return dataforseo.api_post(endpoint, data, timeout=120)
 
 
 def auto_save(rows: list, command: str, seed: str = "", location: str = "au") -> Path:
-    """Auto-save results to timestamped CSV file."""
-    RESULTS_DIR.mkdir(exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    seed_part = f"_{seed.replace(' ', '-')[:30]}" if seed else ""
-    filename = f"{command}{seed_part}_{location}_{timestamp}.csv"
-    filepath = RESULTS_DIR / filename
-
-    with open(filepath, "w", newline="") as f:
-        if rows:
-            writer = csv.DictWriter(f, fieldnames=rows[0].keys())
-            writer.writeheader()
-            writer.writerows(rows)
-
-    return filepath
+    """Auto-save results to timestamped CSV file (includes location in name)."""
+    return dataforseo.auto_save(rows, command, seed, tag=location)
 
 
 def save_json(data: dict, command: str, seed: str = "", location: str = "au") -> Path:
@@ -84,33 +52,6 @@ def save_json(data: dict, command: str, seed: str = "", location: str = "au") ->
         json.dump(data, f, indent=2)
 
     return filepath
-
-
-def confirm_cost(action: str, details: list, estimated_cost: float) -> bool:
-    """Show action details and cost, ask for confirmation."""
-    click.echo("\n" + "═" * 60, err=True)
-    click.echo("📋 DRY RUN - Action Preview", err=True)
-    click.echo("═" * 60, err=True)
-    click.echo(f"\n🎯 Action: {action}", err=True)
-    click.echo("\n📝 Details:", err=True)
-    for detail in details:
-        click.echo(f"   • {detail}", err=True)
-    click.echo(f"\n💰 Estimated Cost: ${estimated_cost:.4f}", err=True)
-
-    try:
-        result = api_get("appendix/user_data")
-        if result.get("status_code") == 20000:
-            tasks = result.get("tasks", [])
-            if tasks and tasks[0].get("result"):
-                balance = tasks[0]["result"][0].get("money", {}).get("balance", 0)
-                remaining = balance - estimated_cost
-                click.echo(f"💵 Current Balance: ${balance:.2f}", err=True)
-                click.echo(f"💵 After This Call: ${remaining:.2f}", err=True)
-    except Exception:
-        pass
-
-    click.echo("\n" + "═" * 60, err=True)
-    return click.confirm("Proceed with this API call?", err=True)
 
 
 @click.group()

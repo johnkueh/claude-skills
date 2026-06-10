@@ -7,7 +7,13 @@ description: DataForSEO SERP analysis for geo-targeted search result analysis. S
 
 Geo-targeted SERP analysis CLI using DataForSEO APIs. Unlike WebFetch, this provides accurate local search results (e.g., Australia-specific rankings).
 
-**Setup:** Set `DATAFORSEO_API_KEY` environment variable with your base64-encoded DataForSEO credentials.
+**Setup:** Set the `DATAFORSEO_API_KEY` environment variable. The value is the base64 encoding of your DataForSEO `login:password` pair (it is sent as an HTTP Basic auth header):
+
+```bash
+echo -n 'login:pass' | base64
+```
+
+API calls retry automatically on transient errors (HTTP 429/503/504): 3 attempts, 2s/4s backoff. Shared client code is in `dataforseo.py`, synced from `scripts/shared/dataforseo.py` in the repo — edit the canonical copy, not the synced one.
 
 ## CLI Location
 
