@@ -135,17 +135,31 @@ def classify(user_agent: str) -> str | None:
     return None
 
 
+def row_timestamp_ms(row: dict) -> int:
+    """Parse a row's ISO timestamp ('2026-06-10T07:20:27.692Z') to epoch ms."""
+    ts = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
+    return int(ts.timestamp() * 1000)
+
+
 def fetch_rows(token: str, team_id: str, project_id: str, start_ms: int, end_ms: int):
-    """Yield request-log rows for a project over a window, paginating."""
+    """Yield request-log rows for a project over a window.
+
+    The endpoint's `page` param is ignored server-side (verified 2026-06 —
+    every page returns the same newest-50 rows, official CLI included), so we
+    paginate by time-slicing: walk endDate down to the oldest row received,
+    deduping by requestId across the overlap.
+    """
     base = "https://vercel.com/api/logs/request-logs"
-    for page in range(MAX_PAGES):
+    seen: set[str] = set()
+    end = end_ms
+    for _ in range(MAX_PAGES):
         params = urllib.parse.urlencode({
             "projectId": project_id,
             "ownerId": team_id,
             "teamId": team_id,
-            "page": page,
+            "page": 0,
             "startDate": start_ms,
-            "endDate": end_ms,
+            "endDate": end,
         })
         data = api_get(f"{base}?{params}", token)
         if data.get("name") == "ExceedsBillingLimitError":
@@ -153,12 +167,26 @@ def fetch_rows(token: str, team_id: str, project_id: str, start_ms: int, end_ms:
                 "window exceeds your plan's request-log retention — shrink --since"
             )
         rows = data.get("rows", [])
-        yield from rows
-        if not data.get("hasMoreRows"):
+        if not rows:
             return
-        time.sleep(0.15)  # be polite between pages
+        new_rows = [r for r in rows if r.get("requestId") not in seen]
+        for row in new_rows:
+            seen.add(row["requestId"])
+            yield row
+        if len(rows) < PAGE_ROWS and not data.get("hasMoreRows"):
+            return
+        oldest_ms = min(row_timestamp_ms(r) for r in rows)
+        # Re-fetch from the oldest timestamp (inclusive — dedupe absorbs the
+        # overlap); if the whole batch was already seen, force progress.
+        next_end = oldest_ms if new_rows else oldest_ms - 1
+        if next_end >= end:
+            next_end = end - 1
+        end = next_end
+        if end <= start_ms:
+            return
+        time.sleep(0.15)  # be polite between requests
     print(
-        f"Warning: stopped after {MAX_PAGES} pages ({MAX_PAGES * PAGE_ROWS} requests) — "
+        f"Warning: stopped after {MAX_PAGES} requests ({MAX_PAGES * PAGE_ROWS} rows) — "
         "results for this site are truncated; use a smaller --since.",
         file=sys.stderr,
     )

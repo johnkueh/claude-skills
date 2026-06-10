@@ -60,6 +60,8 @@ compared over time.
   `vercel logs` (`vercel.com/api/logs/request-logs`), authenticated with the
   CLI's own token. That endpoint returns `clientUserAgent` per request, which
   the CLI drops. It is internal — if it changes, run doctor and check here.
+  Its `page` param is ignored server-side, so `cli.py` paginates by
+  time-slicing `endDate` and deduping on `requestId`.
 - **Retention (verified 2026-06):** on regular plans the backfill only goes
   back ~1 day; asking for ≥3 days returns `ExceedsBillingLimitError`. So a
   weekly run reports the trailing ~24h, not the whole week — the report says
