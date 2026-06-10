@@ -108,6 +108,8 @@ This walks the committed skill folders, regenerates `.claude-plugin/marketplace.
 claude plugin validate --strict .
 ```
 
+Writing or changing a skill? Follow [docs/skill-conventions.md](docs/skill-conventions.md) — frontmatter triggers, line budgets, `setup`/`doctor`, secrets handling.
+
 ## License
 
 MIT.
