@@ -20,3 +20,6 @@ credentials*.json
 *secret*.json
 *token*.json
 *.zip
+
+# icon-search: commit the small search index, not the heavy render artifact
+skills/icon-search/catalog/*.render.json
