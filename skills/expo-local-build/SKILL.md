@@ -1,69 +1,63 @@
 ---
 name: expo-local-build
-description: Serve locally-built Expo IPAs/APKs from this Mac to a phone over the Cloudflare tunnel. The skill owns the install-page + tunnel ingress wiring; each project owns its own `eas build --local` invocation via package.json `:local` scripts. Triggers on "serve the build", "install page", "send build to phone", "deliver expo build", "expo install URL", "publish IPA", "ad-hoc install page".
+description: Build Expo IPAs/APKs locally (zero EAS build credits) and deliver them to a phone via Vercel Blob + a per-project drafty "builds" canvas with an Install button — works from anywhere, Mac asleep. The skill owns publish-build.sh (Blob upload + OTA manifest + canvas update); each project owns its own `eas build --local` invocation via package.json `:local` scripts whose wrapper also records the dev-client fingerprint for the dev-up skill's expo-qa gate. Triggers on "publish the build", "send build to phone", "deliver expo build", "install page", "builds canvas", "expo install URL", "publish IPA", "ad-hoc install", "local eas build".
 ---
 
 # expo-local-build
 
-This skill **does not build**. Each project owns its build via `pnpm <slot>:local` scripts that wrap `eas build --local`. This skill takes the output directory and publishes it as an install page over the Cloudflare tunnel, reachable from anywhere.
-
-The split:
+This skill **does not build**. Each project owns its build via `pnpm <slot>:local`
+scripts that wrap `eas build --local` (zero EAS build credits — the build runs
+on this Mac). This skill takes the built artifact and **publishes it durably**:
+IPA + iOS OTA manifest to Vercel Blob, then one drafty canvas per project
+("`<label>` builds") gets the Install button and history. Installs work from
+anywhere — cellular, Mac asleep.
 
 | | Lives in | Owns |
 |---|---|---|
-| **Build**   | each project's `app/package.json` + `app/scripts/local-build.sh` | `eas build --local` invocation, macOS PATH preamble, slot naming |
-| **Serve**   | this skill's `deliver.sh` + `install-server.mjs` | install page, tunnel ingress, port allocation, launchd persistence |
+| **Build**   | each project's `app/package.json` + `app/scripts/local-build.sh` | `eas build --local` invocation, macOS PATH preamble, slot naming, fingerprint record |
+| **Publish** | this skill's `publish-build.sh` | Blob upload, OTA manifest, the per-project builds canvas |
 
 ## Usage
 
 ```sh
 SKILL=~/.claude/plugins/marketplaces/johnkueh-skills/skills/expo-local-build/scripts
-bash $SKILL/deliver.sh ~/Projects/myapp/app/build-output
-#   -> https://myapp-install.example.dev/   (open on phone, tap Install)
+bash $SKILL/publish-build.sh ~/Projects/myapp/app/build-output
+#   Canvas:  https://drafty.im/canvas/<label>-builds-<suffix>   ← stable; bookmark on the phone
+#   Install: itms-services://?action=download-manifest&url=…    ← also on the canvas button
 ```
 
-That's it. No flags needed for the common case. The install server reads `build-output/` directly and re-scans on every request, so rebuilding overwrites in place and the page reflects the new build immediately.
+Flags: `--slot dev-ios` (default; any `<profile>-<platform>` filename in
+build-output), `--label NAME` (default: the repo's root dir name, dots→hyphens,
+e.g. `journeys.im` → `journeys-im`).
 
-### Flags
+What it does: extracts bundle id / version / embedded runtime fingerprint from
+the IPA → uploads IPA + generated `manifest.plist` to Blob under
+`build-artifacts/<label>/<slot>-<commit>-…` → appends to the project's build
+history → re-renders and pushes the **same canvas** (slug pinned after the
+first push). Android APKs upload the same way and link as a plain download.
 
-| Flag | What it does |
-|---|---|
-| `--label NAME` | Override the project label (default: grandparent dir name of the build-output path, e.g. `my.app` → `my-app`). |
-| `--persist` | Run the install server under launchd (`~/Library/LaunchAgents/dev.jkyf.expo-localbuild.<label>.plist`, `KeepAlive`) so it survives logout/reboot. Default is an ad-hoc background process that dies with the shell. |
-| `--unpersist` | Remove that LaunchAgent. Standalone: `deliver.sh --unpersist --label <name>` (no dir needed). |
+State:
+- `~/.expo-local-build/blob-token` — RW token for the shared `build-artifacts`
+  Blob store (team store `store_fLNDBgquUTtfk9Ed`, connected to journeys-im-web
+  as `BUILD_ARTIFACTS_*` for token minting). One store serves every project,
+  path-namespaced. `$BLOB_READ_WRITE_TOKEN` overrides.
+- `~/.expo-local-build/<label>/builds.json` — history (newest first, capped 50).
+- `~/.expo-local-build/<label>/canvas-slug` — the drafty slug after first push.
 
-Env: `TUNNEL_TLD` (default `example.dev`).
+Canvas notes: visibility follows drafty's default (sign-in-gated) — the owner
+can `drafty canvas visibility <slug> public` for tap-from-anywhere; the real
+protection is the unguessable Blob URLs. The Install button uses
+`target="_top"` so the tap escapes the canvas artifact iframe.
 
-### What the install page shows
-
-The page lists exactly the files in `build-output/` matching `<profile>-<platform>.<ext>`:
-
-| Slot | Filename | Card |
-|---|---|---|
-| Dev iOS         | `dev-ios.ipa`       | ► Install (iOS OTA manifest) |
-| Preview iOS     | `preview-ios.ipa`   | ► Install |
-| Prod iOS        | `prod-ios.ipa`      | ► Install |
-| Dev Android     | `dev-android.apk`   | ↓ Download APK |
-| Prod Android    | `prod-android.apk`  | ↓ Download APK |
-
-Order: prod → preview → dev, iOS before Android. Any file that doesn't match the pattern is ignored — no timestamped builds, no symlinks, no historical noise. Rebuilding a slot overwrites in place.
-
-If you want a build older than the latest, rebuild from a git tag.
-
-## How the tunnel ingress works
-
-`deliver.sh` picks one of two modes automatically:
-
-- **portless/pubproxy present** (something listening on `127.0.0.1:1354`): `install-server.mjs` registers `<label>-install.localhost` in `~/.portless/routes.json` on startup, and the tunnel's wildcard rule (`*.<TUNNEL_TLD>` → pubproxy `:1354`) forwards to it. URL: `https://<label>-install.<TUNNEL_TLD>/`. This is the full [dev-up](../dev-up/SKILL.md) setup.
-- **no pubproxy** (e.g. the Mac mini, hand-curated per-host ingress): `deliver.sh` wires a dedicated cloudflared ingress rule straight to the install server's port — finds the running `cloudflared tunnel run <name>`, runs `cloudflared tunnel route dns <name> <label>-localbuild.<TUNNEL_TLD>`, upserts the hostname/service block into `config.yml` (inside a managed `# BEGIN expo-local-build` block), and `SIGHUP`s cloudflared. URL: `https://<label>-localbuild.<TUNNEL_TLD>/`. The `wire-ingress.mjs` helper does the YAML surgery and backs up `config.yml` to `config.yml.bak` once.
-
-Either way the URL only works while the Mac is awake **and** `cloudflared` is running. If it 502s, the tunnel/Mac is down — start `cloudflared tunnel run <name>` (or see the dev-up skill's `doctor.sh`). If `deliver.sh` can't find a running cloudflared it still starts the local server and prints `http://127.0.0.1:<port>/`.
-
-State per project lives in `~/.expo-local-build/<label>/`: `server.pid`, `server.log`, and (under `--persist`) `server.out.log` / `server.err.log`. The IPAs/APKs are NOT copied here — the server reads the project's `build-output/` directly.
+Retired 2026-06-13: `deliver.sh` / `install-server.mjs` / `wire-ingress.mjs`
+(the serve-from-this-Mac-over-the-tunnel path). Blob delivery replaced it —
+the old way needed the Mac awake at install time. If you ever need the
+nothing-leaves-the-Mac variant, it's in git history (pre-2026-06-13).
 
 ## Adding local builds to a new Expo project
 
-Three pieces. Once they're in, `pnpm <slot>:local` builds and `deliver.sh` serves.
+Three pieces. Once they're in, `pnpm <slot>:local` builds and `publish-build.sh`
+delivers.
 
 ### 1. `app/scripts/local-build.sh` — env preamble wrapper
 
@@ -114,7 +108,8 @@ dev-up skill is absent.
 "build:android:prod:local":   "scripts/local-build.sh --profile production  --platform android --output build-output/prod-android.apk"
 ```
 
-If your project sets `EXPO_APPLE_TEAM_ID` on the cloud scripts, prefix the corresponding `:local` ones too — credentials resolution needs it.
+If your project sets `EXPO_APPLE_TEAM_ID` on the cloud scripts, prefix the
+corresponding `:local` ones too — credentials resolution needs it.
 
 ### 3. `app/.gitignore`
 
@@ -128,7 +123,8 @@ build-output/
 2. **Homebrew Ruby** — `brew install ruby`. The wrapper script picks up the gem bin (where fastlane lives) automatically.
 3. **EAS account** — `eas login` once. Don't set `EXPO_TOKEN` in your shell rc; the wrapper unsets it because the CI robot token is Viewer-only and breaks credential resolution.
 4. **Apple Developer membership** — paid membership active under the team ID referenced in `eas.json`.
-5. **Cloudflare tunnel** — see [dev-up](../dev-up/SKILL.md). The tunnel must be running for `deliver.sh` to publish a public URL.
+5. **Blob token** — put the `build-artifacts` store's RW token in `~/.expo-local-build/blob-token` (chmod 600). The store lives on the Vercel team; mint a token by connecting the store to any project (env prefix keeps it inert).
+6. **drafty CLI** — the drafty plugin must be installed and logged in (the canvas push runs as the owner).
 
 ### One-time project setup (per Expo project)
 
@@ -140,9 +136,4 @@ Register the device once: `eas device:create`. After that, every `development` b
 
 - **Shipping a real release.** App Store `.ipa` and Play `.aab` can't be sideloaded — they reject. Use the project's own `pnpm release` dispatcher.
 - **Building in the cloud.** That's `eas build --profile <p> --platform <p>` (no `--local`) and lives in each project's non-`:local` `build:*` scripts.
-- **Replacing the dev-client / Metro flow.** For day-to-day work, run `pnpm dev` and use the registered dev client. This skill is for handing a build to a phone — a release-config tester install, or a teammate's device, or "I'm out and need a working build now."
-
-## Stop serving
-
-Ad-hoc (default): `kill $(cat ~/.expo-local-build/<label>/server.pid)`
-LaunchAgent (`--persist`): `deliver.sh --unpersist --label <label>`
+- **Replacing the dev-client / Metro flow.** For day-to-day JS work, run `pnpm dev` and use the registered dev client (and the dev-up skill's `expo-qa.sh publish` for branch QA via EAS Update). This skill is for handing a *binary* to a phone — a new dev client after native changes, a release-config tester install, or a teammate's device.
