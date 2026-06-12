@@ -20,15 +20,21 @@ warn()  { yellow "$1"; WARN=$((WARN+1)); }
 
 # ---- 1. cloudflared binary --------------------------------------------------
 
+# What matters is that a BREW binary exists (the LaunchAgent references it by
+# absolute path). A pnpm node-wrapper earlier in PATH is only a hygiene warning.
+CF_BREW=""
+for cand in "$(brew --prefix 2>/dev/null)/opt/cloudflared/bin/cloudflared" \
+            /opt/homebrew/bin/cloudflared /usr/local/bin/cloudflared; do
+  [[ -x "$cand" ]] && { CF_BREW="$cand"; break; }
+done
 CF=$(command -v cloudflared 2>/dev/null || true)
-if [[ -z "$CF" ]]; then
-  err "cloudflared not in PATH"
+if [[ -z "$CF_BREW" ]]; then
+  err "no brew cloudflared binary found${CF:+ (PATH has $CF — a node-wrapper that breaks under launchd)}"
   fix "brew install cloudflare/cloudflare/cloudflared"
-elif [[ "$CF" != *"$(brew --prefix 2>/dev/null)"* && "$CF" != /opt/homebrew/* && "$CF" != /usr/local/* ]]; then
-  err "cloudflared at $CF is not the brew binary (likely the pnpm node-wrapper, breaks under launchd)"
-  fix "pnpm rm -g cloudflared && brew install cloudflare/cloudflare/cloudflared"
 else
-  ok "cloudflared binary: $CF"
+  ok "cloudflared binary: $CF_BREW"
+  [[ -n "$CF" && "$CF" != "$CF_BREW" && "$CF" != /opt/homebrew/* && "$CF" != /usr/local/* ]] && \
+    warn "PATH resolves cloudflared to $CF (pnpm wrapper) — harmless for the daemon, but 'cloudflared' in your shell uses it; consider: pnpm rm -g cloudflared"
 fi
 
 # ---- 2. cloudflared LaunchAgent + connections -------------------------------
