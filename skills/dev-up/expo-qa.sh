@@ -13,6 +13,13 @@
 #                       enforced so a publish can never land on a release
 #                       channel (channels map to branches explicitly; nothing
 #                       maps to wt/*).
+#   expo-qa.sh record   Pin the fingerprint the dev client was just built
+#                       from (~/.expo-qa/<app>-<platform>.json). Run after
+#                       building+installing a dev client (the expo-local-build
+#                       wrapper does). With a record present, gate/publish
+#                       also detect a STALE INSTALLED CLIENT (exit 3): tree
+#                       matches baseline but the client predates it — the
+#                       published update would be greyed out on the device.
 #
 # Composes with metro-takeover.sh: Metro is the inner loop (HMR, one worktree
 # at a time on the pinned port); publish is the review path (N worktrees
@@ -42,7 +49,8 @@ log()    { printf '%s\n' "$*" >&2; }
 die()    { red "expo-qa: $*"; exit 1; }
 
 VERB="${1:-}"
-[[ "$VERB" == "gate" || "$VERB" == "publish" ]] || die "usage: expo-qa.sh gate|publish [flags]"
+[[ "$VERB" == "gate" || "$VERB" == "publish" || "$VERB" == "record" ]] \
+  || die "usage: expo-qa.sh gate|publish|record [flags]"
 shift
 
 PLATFORM="${EQ_PLATFORM:-ios}"
@@ -151,7 +159,72 @@ generate_fp() {  # $1 = dir to fingerprint, $2 = output file
 
 fp_hash() { node -e "process.stdout.write(require('$1').hash)"; }
 
+# ---- recorded client fingerprint ----------------------------------------------
+# `record` is run right after building+installing a dev client (the
+# expo-local-build wrapper calls it). It pins what native baseline the
+# installed client was built from, so `gate` can detect a third failure leg:
+# branch == main natively, but the *installed client* predates main — a
+# published update would list on the device but refuse to open (fingerprint
+# runtime policy) or load against wrong natives (pinned runtime).
+
+APP_SLUG=$(node -e "
+  try { process.stdout.write((require('$APP_DIR/package.json').name || '').replace(/[^a-zA-Z0-9._-]/g, '-')); } catch (_) {}
+")
+[[ -n "$APP_SLUG" ]] || APP_SLUG=$(basename "$ROOT")
+RECORD_DIR="$HOME/.expo-qa"
+RECORD_FILE="$RECORD_DIR/${APP_SLUG}-${PLATFORM}.json"
+
+run_record() {
+  log "expo-qa: recording client fingerprint for $APP_SLUG [$PLATFORM]…"
+  generate_fp "$APP_DIR" "$TMP_DIR/rec.json"
+  local hash commit
+  hash=$(fp_hash "$TMP_DIR/rec.json")
+  commit=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo "?")
+  mkdir -p "$RECORD_DIR"
+  node -e "
+    require('fs').writeFileSync('$RECORD_FILE', JSON.stringify({
+      hash: '$hash',
+      platform: '$PLATFORM',
+      fingerprintVersion: '$(fp_version "$FP_BIN")',
+      recordedAt: new Date().toISOString(),
+      commit: '$commit',
+      branch: '$BRANCH',
+      appDir: '$APP_DIR',
+    }, null, 2) + '\n');
+  "
+  green "expo-qa: recorded $hash → $RECORD_FILE"
+  green "  (gate will now flag when the installed client goes stale vs the tree being QA'd)"
+}
+
+# Returns 0 = fresh or no record; 1 = stale. Sets REC_HASH / REC_AT when a record exists.
+check_recorded() {  # $1 = hash the client must match
+  REC_HASH=""; REC_AT=""
+  [[ -f "$RECORD_FILE" ]] || {
+    log "expo-qa: no recorded client fingerprint ($RECORD_FILE) — run 'expo-qa.sh record' after building a dev client to enable stale-client detection"
+    return 0
+  }
+  REC_HASH=$(node -e "try{process.stdout.write(require('$RECORD_FILE').hash||'')}catch(_){}")
+  REC_AT=$(node -e "try{process.stdout.write(require('$RECORD_FILE').recordedAt||'?')}catch(_){}")
+  local rec_fpver
+  rec_fpver=$(node -e "try{process.stdout.write(require('$RECORD_FILE').fingerprintVersion||'')}catch(_){}")
+  [[ -n "$rec_fpver" && "$rec_fpver" != "$(fp_version "$FP_BIN")" ]] && \
+    yellow "expo-qa: @expo/fingerprint version skew vs recorded client ($rec_fpver → $(fp_version "$FP_BIN")) — staleness below may be algorithm drift"
+  [[ "$REC_HASH" == "$1" ]] && return 0
+  return 1
+}
+
 # ---- gate --------------------------------------------------------------------
+
+stale_client_report() {
+  red "expo-qa: CLIENT STALE"
+  red "  tree fingerprint:              $WT_HASH"
+  red "  installed client (recorded $REC_AT): $REC_HASH"
+  red "  → the installed dev client was built from an older native baseline."
+  red "    A published update will list on the device but won't open"
+  red "    (fingerprint runtime) or will run against wrong natives (pinned)."
+  red "    Rebuild + reinstall the dev client (expo-local-build), then re-run"
+  red "    'expo-qa.sh record'. Override with --skip-gate if a fresher device exists."
+}
 
 run_gate() {
   log "expo-qa: fingerprinting worktree ($BRANCH) [$PLATFORM]…"
@@ -160,7 +233,12 @@ run_gate() {
 
   if [[ "$IS_BASELINE" -eq 1 ]]; then
     green "expo-qa: this IS the baseline checkout ($DEFAULT_BRANCH) — fingerprint $WT_HASH"
-    [[ "$JSON_OUT" -eq 1 ]] && printf '{"match":true,"baseline":true,"hash":"%s"}\n' "$WT_HASH"
+    if ! check_recorded "$WT_HASH"; then
+      stale_client_report
+      [[ "$JSON_OUT" -eq 1 ]] && printf '{"match":true,"baseline":true,"hash":"%s","clientFresh":false,"clientHash":"%s"}\n' "$WT_HASH" "$REC_HASH"
+      return 3
+    fi
+    [[ "$JSON_OUT" -eq 1 ]] && printf '{"match":true,"baseline":true,"hash":"%s","clientFresh":true}\n' "$WT_HASH"
     return 0
   fi
 
@@ -177,8 +255,13 @@ run_gate() {
   if [[ "$WT_HASH" == "$BASE_HASH" ]]; then
     green "expo-qa: MATCH ($WT_HASH)"
     green "  → branch '$BRANCH' is JS-only relative to $DEFAULT_BRANCH."
+    if ! check_recorded "$WT_HASH"; then
+      stale_client_report
+      [[ "$JSON_OUT" -eq 1 ]] && printf '{"match":true,"baseline":false,"hash":"%s","clientFresh":false,"clientHash":"%s"}\n' "$WT_HASH" "$REC_HASH"
+      return 3
+    fi
     green "  → the installed dev client is valid: QA via Metro (metro-takeover) or EAS Update."
-    [[ "$JSON_OUT" -eq 1 ]] && printf '{"match":true,"baseline":false,"hash":"%s"}\n' "$WT_HASH"
+    [[ "$JSON_OUT" -eq 1 ]] && printf '{"match":true,"baseline":false,"hash":"%s","clientFresh":true}\n' "$WT_HASH"
     return 0
   fi
 
@@ -211,6 +294,11 @@ run_gate() {
   return 2
 }
 
+if [[ "$VERB" == "record" ]]; then
+  run_record
+  exit 0
+fi
+
 if [[ "$VERB" == "gate" ]]; then
   run_gate
   exit $?
@@ -221,7 +309,12 @@ fi
 if [[ "$SKIP_GATE" -eq 1 ]]; then
   yellow "expo-qa: gate skipped (--skip-gate) — you are asserting this branch is JS-only"
 else
-  run_gate || die "gate failed — refusing to publish an update the installed client can't faithfully run"
+  gate_rc=0; run_gate || gate_rc=$?
+  if [[ "$gate_rc" -eq 3 ]]; then
+    die "installed dev client is stale — rebuild + reinstall it first (expo-local-build), or --skip-gate if you'll load this on a fresher device"
+  elif [[ "$gate_rc" -ne 0 ]]; then
+    die "gate failed — refusing to publish an update the installed client can't faithfully run"
+  fi
 fi
 
 command -v eas >/dev/null 2>&1 || die "eas CLI not found"

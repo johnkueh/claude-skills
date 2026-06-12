@@ -552,9 +552,22 @@ Metro takeover is the **inner loop** (HMR, one worktree at a time on the pinned 
 cd <any-worktree-of-the-project>
 /abs/path/to/dev-up/expo-qa.sh gate                 # is the installed dev client valid for this branch?
 /abs/path/to/dev-up/expo-qa.sh publish [--dry-run]  # gate, then eas update --branch wt/<branch>
+/abs/path/to/dev-up/expo-qa.sh record               # after building+installing a dev client: pin its fingerprint
 ```
 
 **`gate`** computes the worktree's `@expo/fingerprint` hash (iOS by default, `--platform android` to switch) and compares it to the checkout on the repo's default branch. Match (exit 0) → the branch is JS-only relative to the baseline, so QA on the already-installed dev client — via Metro takeover or a published update — is valid. Mismatch (exit 2) → the branch changes the native layer; the shared dev client will NOT reflect it and any "verified on sim" claim through it is a false positive. The branch needs its own `eas build --profile development`. The differing fingerprint sources are printed so you can see *what* diverged. Run the gate before claiming any simulator verification on a worktree — this kills the verified-on-a-stale-native-client failure class, and it's the only protection on projects with a **pinned** `runtimeVersion` (where a native-drifted update would still load, then crash). On `runtimeVersion: { policy: 'fingerprint' }` projects the gate predicts whether a published update will even be loadable.
+
+**`record`** closes the gate's blind spot: branch-vs-baseline says nothing about
+whether the *installed dev client* matches the baseline — a client built weeks
+ago lists new updates but greys out Open (fingerprint runtime) or loads them
+against wrong natives (pinned runtime). `record` pins the fingerprint of the
+tree a dev client was just built from to `~/.expo-qa/<app>-<platform>.json`;
+the project `local-build.sh` wrappers call it automatically after a successful
+`--profile development` build. With a record present, `gate` adds a third
+verdict — **CLIENT STALE, exit 3** (vs 2 = branch native-divergent) — and
+`publish` refuses with "rebuild the dev client first" (`--skip-gate` if you'll
+load on a fresher device). No record file → gate behaves as before and prints
+how to enable it.
 
 **`publish`** runs the gate, then `eas update --branch wt/<branch>` from the app dir with the dev script's env applied (so `APP_VARIANT`-style config variants resolve the same as the running dev client), and emits a dev-client deeplink (`<scheme>://expo-development-client/?url=<u.expo.dev update URL>`). This is the parallel-QA bus: N worktrees publish concurrently with zero Metro/port/sim contention, and any dev client — a simulator or a physical phone, no Mac involved — can load any branch. ~1–2 min publish latency, no HMR: it's the review path, not the dev loop; the two compose. The `wt/` branch prefix is enforced and publishing from the default branch is refused, so a publish can never reach a release channel (channels map to branches explicitly; nothing maps to `wt/*`). `--dry-run` prints the exact command without publishing. Where a project's OTA releases require separate authorization (e.g. recipes.im), that covers *channel-mapped* branches — `wt/*` QA publishes are agent infrastructure, but still surface them in your report.
 
