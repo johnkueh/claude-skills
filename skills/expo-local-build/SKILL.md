@@ -85,10 +85,24 @@ fi
 
 unset EXPO_TOKEN
 
-exec eas build --local --non-interactive "$@"
+eas build --local --non-interactive "$@"
+
+# Build succeeded (set -e) — record the fingerprint this client was built from
+# so expo-qa's gate (dev-up skill) can flag a stale installed client.
+# Dev profile only; fail-soft so recording problems never break a build.
+EXPO_QA="$HOME/Projects/claude-skills/skills/dev-up/expo-qa.sh"
+if printf '%s ' "$@" | grep -q -- '--profile development' && [ -x "$EXPO_QA" ]; then
+  platform=ios
+  printf '%s ' "$@" | grep -q -- '--platform android' && platform=android
+  EQ_PLATFORM="$platform" "$EXPO_QA" record || true
+fi
 ```
 
-`chmod +x` it.
+`chmod +x` it. The trailing block pins what native baseline the dev client was
+built from (`~/.expo-qa/<app>-<platform>.json`) so the dev-up skill's
+`expo-qa.sh gate` can say "your installed client is stale — rebuild" *before*
+you publish an update that would grey out on the device. Harmless if the
+dev-up skill is absent.
 
 ### 2. `app/package.json` — one script per slot
 
