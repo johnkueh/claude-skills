@@ -400,11 +400,19 @@ strips the `art-` prefix as a fallback). No extra portless entry per worktree.
 
 `worktrees-gc.sh` (next to this `SKILL.md`, works in any repo — web or Expo)
 prunes agent worktrees under `.claude/worktrees/` whose work has landed. A
-worktree is removed only when **all three** hold: clean working tree, HEAD is an
-ancestor of `origin/<default-branch>` (detected — main, master, whatever
-origin/HEAD says), and nothing outside build dirs (`node_modules`, `.next`,
-`.expo`, `ios/build`, `ios/Pods`, `android/build`, `android/.gradle`) was
-touched in 6 hours — so a co-running agent session is never yanked. Everything
+worktree is removed only when **all three** hold: clean working tree, the work
+landed, and nothing outside build dirs was recently touched. "Landed" means
+HEAD is an ancestor of `origin/<default-branch>` (detected — main, master,
+whatever origin/HEAD says), **or** — for squash/rebase-merged PRs, where
+ancestry never holds because the merge rewrites SHAs — `gh` finds a merged PR
+for the branch whose head SHA equals the worktree's HEAD (a branch with
+commits added after the merge is kept). So it does NOT prescribe a merge
+style: direct pushes, merge commits, and squash-merged PRs all get cleaned
+up; the gh check degrades to KEEP when gh is absent or the remote isn't
+GitHub. The recency guard keeps any worktree where something outside build
+dirs (`node_modules`, `.next`, `.expo`, `ios/build`, `ios/Pods`,
+`android/build`, `android/.gradle`) was touched in the last 6 hours — so a
+co-running agent session is never yanked. Everything
 kept is listed with its reason. `--dry-run` to preview. Run it after a ship
 lands, or whenever worktrees pile up; idempotent, never touches the main
 checkout. Note pnpm worktrees cost far less disk than `du` suggests

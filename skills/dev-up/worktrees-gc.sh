@@ -5,7 +5,9 @@
 #
 # A worktree is pruned only when ALL of:
 #   - its working tree is clean (no uncommitted/untracked changes)
-#   - its HEAD is an ancestor of origin/<default-branch> (the work landed)
+#   - its work landed: HEAD is an ancestor of origin/<default-branch>, OR (for
+#     squash/rebase merges, where ancestry never holds) gh finds a merged PR
+#     for the branch whose head SHA equals the worktree HEAD
 #   - nothing in it (outside node_modules/.next/.expo/ios/android build dirs)
 #     was touched in the last 6 hours (a co-running agent session shows up as
 #     recent mtimes — never yank a live session's floor out)
@@ -39,8 +41,26 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
   if [ -n "$(git -C "$wt" status --porcelain | head -1)" ]; then
     echo "KEEP (dirty working tree): $wt"; continue
   fi
-  if ! git merge-base --is-ancestor "$head" "$LANDED_REF"; then
-    echo "KEEP (commits not on $LANDED_REF): $wt [$branch]"; continue
+  landed_via=""
+  if git merge-base --is-ancestor "$head" "$LANDED_REF"; then
+    landed_via="$LANDED_REF ancestry"
+  elif [ "$branch" != "?" ] && command -v gh >/dev/null 2>&1; then
+    # Squash/rebase merges rewrite SHAs, so ancestry never holds — ask GitHub
+    # for a merged PR whose head is this branch. Only trust it if the merged
+    # PR's head SHA equals the worktree's HEAD: a branch that grew new commits
+    # after the merge is NOT landed.
+    pr_info="$(gh pr list --head "$branch" --state merged --json number,headRefOid \
+      --jq '.[0] // empty | "\(.number) \(.headRefOid)"' 2>/dev/null || true)"
+    pr_num="${pr_info%% *}"
+    pr_head="${pr_info##* }"
+    if [ -n "$pr_num" ] && [ "$pr_head" = "$head" ]; then
+      landed_via="merged PR #$pr_num (squash/rebase)"
+    elif [ -n "$pr_num" ]; then
+      echo "KEEP (PR #$pr_num merged but worktree has newer commits): $wt [$branch]"; continue
+    fi
+  fi
+  if [ -z "$landed_via" ]; then
+    echo "KEEP (commits not on $LANDED_REF, no merged PR): $wt [$branch]"; continue
   fi
   recent="$(find "$wt" \
     -path '*/node_modules' -prune -o \
@@ -55,11 +75,11 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt;
     echo "SKIP (recent activity — possibly a live session): $wt"; continue
   fi
   if [ "$DRY" = "--dry-run" ]; then
-    echo "WOULD PRUNE: $wt [$branch]"
+    echo "WOULD PRUNE ($landed_via): $wt [$branch]"
   else
     git worktree remove "$wt" --force
     [ "$branch" != "?" ] && git branch -D "$branch" >/dev/null 2>&1 || true
-    echo "pruned: $wt [$branch]"
+    echo "pruned ($landed_via): $wt [$branch]"
   fi
 done
 git worktree prune
