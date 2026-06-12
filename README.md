@@ -50,7 +50,7 @@ These are the ones that earned a permanent spot in my setup. They lean on real k
 | Skill | What it does |
 |---|---|
 | [`expo-local-build`](skills/expo-local-build) | Build an Expo app locally and send the IPA or APK straight to a phone over a Cloudflare tunnel. |
-| [`cloudflare-tunnel-portless`](skills/cloudflare-tunnel-portless) | An ngrok replacement that puts many local dev servers behind one wildcard subdomain, with Metro switching for Expo worktrees. |
+| [`dev-up`](skills/dev-up) | One-verb dev-server + worktree QA lifecycle (dev-up/dev-down, metro-takeover, expo-qa fingerprint gate + EAS Update publish, worktrees-gc), backed by an ngrok-replacing Cloudflare tunnel. Formerly cloudflare-tunnel-portless. |
 | [`ios-device`](skills/ios-device) | Drive a paired iPhone or iPad over the wireless tunnel — stream logs, pull files, trigger a memory warning, reboot. |
 | [`vercel-logs`](skills/vercel-logs) | Query Vercel runtime and build logs to debug production, with full message bodies the dashboard truncates. |
 | [`instantdb`](skills/instantdb) | Build a working React, vanilla JS, or Expo app with InstantDB as a realtime, local-first backend. |

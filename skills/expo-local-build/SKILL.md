@@ -54,10 +54,10 @@ If you want a build older than the latest, rebuild from a git tag.
 
 `deliver.sh` picks one of two modes automatically:
 
-- **portless/pubproxy present** (something listening on `127.0.0.1:1354`): `install-server.mjs` registers `<label>-install.localhost` in `~/.portless/routes.json` on startup, and the tunnel's wildcard rule (`*.<TUNNEL_TLD>` → pubproxy `:1354`) forwards to it. URL: `https://<label>-install.<TUNNEL_TLD>/`. This is the full [cloudflare-tunnel-portless](../cloudflare-tunnel-portless/SKILL.md) setup.
+- **portless/pubproxy present** (something listening on `127.0.0.1:1354`): `install-server.mjs` registers `<label>-install.localhost` in `~/.portless/routes.json` on startup, and the tunnel's wildcard rule (`*.<TUNNEL_TLD>` → pubproxy `:1354`) forwards to it. URL: `https://<label>-install.<TUNNEL_TLD>/`. This is the full [dev-up](../dev-up/SKILL.md) setup.
 - **no pubproxy** (e.g. the Mac mini, hand-curated per-host ingress): `deliver.sh` wires a dedicated cloudflared ingress rule straight to the install server's port — finds the running `cloudflared tunnel run <name>`, runs `cloudflared tunnel route dns <name> <label>-localbuild.<TUNNEL_TLD>`, upserts the hostname/service block into `config.yml` (inside a managed `# BEGIN expo-local-build` block), and `SIGHUP`s cloudflared. URL: `https://<label>-localbuild.<TUNNEL_TLD>/`. The `wire-ingress.mjs` helper does the YAML surgery and backs up `config.yml` to `config.yml.bak` once.
 
-Either way the URL only works while the Mac is awake **and** `cloudflared` is running. If it 502s, the tunnel/Mac is down — start `cloudflared tunnel run <name>` (or see the cloudflare-tunnel-portless skill's `doctor.sh`). If `deliver.sh` can't find a running cloudflared it still starts the local server and prints `http://127.0.0.1:<port>/`.
+Either way the URL only works while the Mac is awake **and** `cloudflared` is running. If it 502s, the tunnel/Mac is down — start `cloudflared tunnel run <name>` (or see the dev-up skill's `doctor.sh`). If `deliver.sh` can't find a running cloudflared it still starts the local server and prints `http://127.0.0.1:<port>/`.
 
 State per project lives in `~/.expo-local-build/<label>/`: `server.pid`, `server.log`, and (under `--persist`) `server.out.log` / `server.err.log`. The IPAs/APKs are NOT copied here — the server reads the project's `build-output/` directly.
 
@@ -114,7 +114,7 @@ build-output/
 2. **Homebrew Ruby** — `brew install ruby`. The wrapper script picks up the gem bin (where fastlane lives) automatically.
 3. **EAS account** — `eas login` once. Don't set `EXPO_TOKEN` in your shell rc; the wrapper unsets it because the CI robot token is Viewer-only and breaks credential resolution.
 4. **Apple Developer membership** — paid membership active under the team ID referenced in `eas.json`.
-5. **Cloudflare tunnel** — see [cloudflare-tunnel-portless](../cloudflare-tunnel-portless/SKILL.md). The tunnel must be running for `deliver.sh` to publish a public URL.
+5. **Cloudflare tunnel** — see [dev-up](../dev-up/SKILL.md). The tunnel must be running for `deliver.sh` to publish a public URL.
 
 ### One-time project setup (per Expo project)
 

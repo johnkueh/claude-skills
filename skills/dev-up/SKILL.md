@@ -1,11 +1,17 @@
 ---
-name: cloudflare-tunnel-portless
-description: Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), `worktrees-gc.sh` for pruning landed agent worktrees in any repo, and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on "dev-up", "spin up the dev server", "start the dev server", "test before shipping", "public URL for this worktree", "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "expo-qa", "fingerprint gate", "is the dev client valid for this branch", "publish this branch as an EAS update", "QA this worktree on my phone", "worktrees-gc", "clean up worktrees", "prune old worktrees", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
+name: dev-up
+description: One-verb local dev-server + worktree QA lifecycle for any checkout (web or Expo), backed by a Cloudflare-Tunnel ngrok replacement that multiplexes many dev servers (via portless) through one wildcard subdomain. Includes `dev-up`/`dev-down`/`dev-status` (env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), `worktrees-gc.sh` for pruning landed agent worktrees in any repo, and `doctor.sh` for health-checking the tunnel/portless chain. Formerly named cloudflare-tunnel-portless. Triggers on "dev-up", "spin up the dev server", "start the dev server", "test before shipping", "public URL for this worktree", "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "expo-qa", "fingerprint gate", "is the dev client valid for this branch", "publish this branch as an EAS update", "QA this worktree on my phone", "worktrees-gc", "clean up worktrees", "prune old worktrees", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
 ---
 
-# Cloudflare Tunnel + portless
+# dev-up — local dev servers + worktree QA, one verb each
 
-Replaces ngrok with a free Cloudflare Tunnel + a tiny Caddy host-rewriter in front of [portless](https://github.com/vercel-labs/portless). One persistent tunnel handles every web project under a single wildcard subdomain. Expo apps get individual ingress entries.
+The day-to-day surface is the verbs: `dev-up`/`dev-down`/`dev-status` for any
+checkout or worktree, `metro-takeover` + `expo-qa` for Expo QA, `worktrees-gc`
+for cleanup. Underneath: a free Cloudflare Tunnel + a tiny host-rewriter in
+front of [portless](https://github.com/vercel-labs/portless) replaces ngrok —
+one persistent tunnel handles every web project under a single wildcard
+subdomain, Expo apps get individual ingress entries. (This skill was formerly
+named `cloudflare-tunnel-portless`.)
 
 ## dev-up / dev-down / dev-status — START HERE for day-to-day use
 
@@ -151,7 +157,7 @@ Substitute the real UUID, `$HOME`, and `$DOMAIN`.
 Foreground sanity check:
 
 ```bash
-PUBPROXY_TLD=<DOMAIN> node /path/to/cloudflare-tunnel-portless/pubproxy.js &
+PUBPROXY_TLD=<DOMAIN> node /path/to/dev-up/pubproxy.js &
 sleep 1
 curl -sI -H "Host: <some-running-project>.<DOMAIN>" http://127.0.0.1:1354/
 ```
@@ -193,7 +199,7 @@ cat > ~/Library/LaunchAgents/com.<short-tag>.pubproxy.plist <<EOF
     <key>ProgramArguments</key>
     <array>
       <string>$(which node)</string>
-      <string>/absolute/path/to/cloudflare-tunnel-portless/pubproxy.js</string>
+      <string>/absolute/path/to/dev-up/pubproxy.js</string>
     </array>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
@@ -259,7 +265,7 @@ Note: writing the plist may require the user to approve a sandbox permission pro
 `doctor.sh` (next to this `SKILL.md`) runs the full health check chain and prints each result with a concrete fix command on failure. Run it after first-time setup, after a macOS update, or whenever something feels off.
 
 ```bash
-/abs/path/to/cloudflare-tunnel-portless/doctor.sh
+/abs/path/to/dev-up/doctor.sh
 ```
 
 Checks, in order (✓ pass / ✗ infra failure / ⚠ advisory):
@@ -406,8 +412,8 @@ checkout. Note pnpm worktrees cost far less disk than `du` suggests
 
 ```bash
 cd <repo>
-/abs/path/to/cloudflare-tunnel-portless/worktrees-gc.sh --dry-run   # preview
-/abs/path/to/cloudflare-tunnel-portless/worktrees-gc.sh             # prune
+/abs/path/to/dev-up/worktrees-gc.sh --dry-run   # preview
+/abs/path/to/dev-up/worktrees-gc.sh             # prune
 ```
 
 #### Converting an existing project to portless
@@ -500,7 +506,7 @@ If you actually need two Expo worktrees live at the same time, pin different por
 
 ```bash
 cd <any-worktree-of-the-project>
-/abs/path/to/cloudflare-tunnel-portless/metro-takeover.sh
+/abs/path/to/dev-up/metro-takeover.sh
 ```
 
 Autodetects everything from the project's existing skill-conformant setup:
@@ -536,8 +542,8 @@ Metro takeover is the **inner loop** (HMR, one worktree at a time on the pinned 
 
 ```bash
 cd <any-worktree-of-the-project>
-/abs/path/to/cloudflare-tunnel-portless/expo-qa.sh gate                 # is the installed dev client valid for this branch?
-/abs/path/to/cloudflare-tunnel-portless/expo-qa.sh publish [--dry-run]  # gate, then eas update --branch wt/<branch>
+/abs/path/to/dev-up/expo-qa.sh gate                 # is the installed dev client valid for this branch?
+/abs/path/to/dev-up/expo-qa.sh publish [--dry-run]  # gate, then eas update --branch wt/<branch>
 ```
 
 **`gate`** computes the worktree's `@expo/fingerprint` hash (iOS by default, `--platform android` to switch) and compares it to the checkout on the repo's default branch. Match (exit 0) → the branch is JS-only relative to the baseline, so QA on the already-installed dev client — via Metro takeover or a published update — is valid. Mismatch (exit 2) → the branch changes the native layer; the shared dev client will NOT reflect it and any "verified on sim" claim through it is a false positive. The branch needs its own `eas build --profile development`. The differing fingerprint sources are printed so you can see *what* diverged. Run the gate before claiming any simulator verification on a worktree — this kills the verified-on-a-stale-native-client failure class, and it's the only protection on projects with a **pinned** `runtimeVersion` (where a native-drifted update would still load, then crash). On `runtimeVersion: { policy: 'fingerprint' }` projects the gate predicts whether a published update will even be loadable.

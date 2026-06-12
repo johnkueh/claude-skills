@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Host-preserving dispatcher that sits in front of portless.
 //
-// Replaces Caddy in the cloudflare-tunnel-portless chain. Caddy was
+// Replaces Caddy in the dev-up chain. Caddy was
 // rewriting the public Host header (`<name>.<TLD>` -> `<name>.localhost`)
 // so portless could dispatch by its hardcoded `.localhost` matcher;
 // that rewrite breaks downstream URL building (Clerk dev handshake,

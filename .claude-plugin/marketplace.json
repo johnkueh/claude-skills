@@ -29,14 +29,14 @@
       "source": "./plugins/claude-fm"
     },
     {
-      "name": "cloudflare-tunnel-portless",
-      "description": "Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), `worktrees-gc.sh` for pruning landed agent worktrees in any repo, and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on \"dev-up\", \"spin up the dev server\", \"start the dev server\", \"test before shipping\", \"public URL for this worktree\", \"set up cloudflare tunnel\", \"ngrok replacement\", \"public URL for localhost\", \"portless\", \"cloudflared\", \"metro-takeover\", \"switch metro to worktree\", \"expo-qa\", \"fingerprint gate\", \"is the dev client valid for this branch\", \"publish this branch as an EAS update\", \"QA this worktree on my phone\", \"worktrees-gc\", \"clean up worktrees\", \"prune old worktrees\", \"tunnel doctor\", \"add project to tunnel\", \"onboard new mac to tunnel\", or \"debug caddy/portless/cloudflared\".",
-      "source": "./plugins/cloudflare-tunnel-portless"
-    },
-    {
       "name": "daily-digest",
       "description": "Per-project daily digest of new signups, top user activities, API/LLM costs, and recently-changed initiative docs — pulled from bq-analytics where available, plus git activity and the latest x-monitor run. Use when the user wants a \"morning digest\" across their projects, says \"give me yesterday's roundup\", or asks for a recurring summary across your projects. Designed to be invoked daily via `/loop`.",
       "source": "./plugins/daily-digest"
+    },
+    {
+      "name": "dev-up",
+      "description": "One-verb local dev-server + worktree QA lifecycle for any checkout (web or Expo), backed by a Cloudflare-Tunnel ngrok replacement that multiplexes many dev servers (via portless) through one wildcard subdomain. Includes `dev-up`/`dev-down`/`dev-status` (env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), `worktrees-gc.sh` for pruning landed agent worktrees in any repo, and `doctor.sh` for health-checking the tunnel/portless chain. Formerly named cloudflare-tunnel-portless. Triggers on \"dev-up\", \"spin up the dev server\", \"start the dev server\", \"test before shipping\", \"public URL for this worktree\", \"set up cloudflare tunnel\", \"ngrok replacement\", \"public URL for localhost\", \"portless\", \"cloudflared\", \"metro-takeover\", \"switch metro to worktree\", \"expo-qa\", \"fingerprint gate\", \"is the dev client valid for this branch\", \"publish this branch as an EAS update\", \"QA this worktree on my phone\", \"worktrees-gc\", \"clean up worktrees\", \"prune old worktrees\", \"tunnel doctor\", \"add project to tunnel\", \"onboard new mac to tunnel\", or \"debug caddy/portless/cloudflared\".",
+      "source": "./plugins/dev-up"
     },
     {
       "name": "exa",
