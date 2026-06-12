@@ -1,6 +1,6 @@
 {
   "name": "claude-skills",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "description": "Collection of Claude Code skills: Exa search, DataForSEO keyword/SERP research, YouTube transcripts, Vercel logs, expo-local-build (local EAS builds + delivery), InstantDB app builder, Notion page reader, wacli (WhatsApp CLI), johns-writing-style (John's iMessage/WhatsApp voice), mailchimp-copy-style (Mailchimp-based copy guide for app surfaces + marketing), kole-design-tips (house UI/UX design playbook for app + web surfaces), slack-search, system-memory-cleanup, system-disk-cleanup, x-monitor, gpt-image-gen-2 (GPT Image 2), veo-video-gen (Veo 3.1 video), youtube-video-upload, claude-fm (terminal background-music toggle).",
   "author": {
     "name": "John Kueh",
