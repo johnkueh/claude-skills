@@ -45,7 +45,7 @@
     },
     {
       "name": "expo-local-build",
-      "description": "Serve locally-built Expo IPAs/APKs from this Mac to a phone over the Cloudflare tunnel. The skill owns the install-page + tunnel ingress wiring; each project owns its own `eas build --local` invocation via package.json `:local` scripts. Triggers on \"serve the build\", \"install page\", \"send build to phone\", \"deliver expo build\", \"expo install URL\", \"publish IPA\", \"ad-hoc install page\".",
+      "description": "Build Expo IPAs/APKs locally (zero EAS build credits) and deliver them to a phone via Vercel Blob + a per-project drafty \"builds\" canvas with an Install button — works from anywhere, Mac asleep. The skill owns publish-build.sh (Blob upload + OTA manifest + canvas update); each project owns its own `eas build --local` invocation via package.json `:local` scripts whose wrapper also records the dev-client fingerprint for the dev-up skill's expo-qa gate. Triggers on \"publish the build\", \"send build to phone\", \"deliver expo build\", \"install page\", \"builds canvas\", \"expo install URL\", \"publish IPA\", \"ad-hoc install\", \"local eas build\".",
       "source": "./plugins/expo-local-build"
     },
     {
