@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# doctor — verify the cloudflare-tunnel-portless setup is healthy.
+# doctor — verify the dev-up setup is healthy.
 #
 # Runs infra checks fail-fast (✗), advisory checks as warnings (⚠).
 # Exit 0 if all infra checks pass, 1 otherwise.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dev-up / dev-down / dev-status — one-verb dev-server lifecycle for any
-# project or worktree behind the cloudflare-tunnel-portless chain.
+# project or worktree behind the dev-up chain.
 #
 #   dev-up      start (or report) the dev server for the current checkout,
 #               seed env into worktrees, print local + public URLs.

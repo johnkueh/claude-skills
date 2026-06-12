@@ -2,7 +2,7 @@
 # metro-takeover — kill any running Expo Metro, start it from the current
 # worktree, wait for ready, emit a clickable dev-client deeplink.
 #
-# Designed for the cloudflare-tunnel-portless skill's Expo convention:
+# Designed for the dev-up skill's Expo convention:
 #   "dev": "EXPO_PACKAGER_PROXY_URL=https://<host> REACT_NATIVE_PACKAGER_HOSTNAME=<host> expo start --dev-client --port <N>"
 #
 # Autodetects everything from package.json + app.json/app.config.ts.

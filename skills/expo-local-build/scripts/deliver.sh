@@ -97,7 +97,7 @@ else
         echo "deliver:   ⚠ couldn't update $CF_CONFIG — add manually: '- hostname: $PUBLIC_HOST' / 'service: http://127.0.0.1:$PORT' before the catch-all." >&2
       pkill -HUP -f 'cloudflared.*tunnel run' 2>/dev/null && echo "deliver:   reloaded cloudflared (SIGHUP)" || echo "deliver:   (couldn't SIGHUP cloudflared — it usually hot-reloads on its own; restart it if the URL 502s)"
     else
-      echo "deliver:   ⚠ no $CF_CONFIG — create it with an ingress rule for $PUBLIC_HOST -> http://127.0.0.1:$PORT (see cloudflare-tunnel-portless skill)." >&2
+      echo "deliver:   ⚠ no $CF_CONFIG — create it with an ingress rule for $PUBLIC_HOST -> http://127.0.0.1:$PORT (see dev-up skill)." >&2
     fi
   fi
 fi
