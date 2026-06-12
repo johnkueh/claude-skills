@@ -1,6 +1,6 @@
 ---
 name: cloudflare-tunnel-portless
-description: Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on "dev-up", "spin up the dev server", "start the dev server", "test before shipping", "public URL for this worktree", "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "expo-qa", "fingerprint gate", "is the dev client valid for this branch", "publish this branch as an EAS update", "QA this worktree on my phone", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
+description: Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), `worktrees-gc.sh` for pruning landed agent worktrees in any repo, and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on "dev-up", "spin up the dev server", "start the dev server", "test before shipping", "public URL for this worktree", "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "expo-qa", "fingerprint gate", "is the dev client valid for this branch", "publish this branch as an EAS update", "QA this worktree on my phone", "worktrees-gc", "clean up worktrees", "prune old worktrees", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
 ---
 
 # Cloudflare Tunnel + portless
@@ -390,6 +390,26 @@ unlike `portless run`. So you control the flat name.)
 and `pubproxy` routes an unregistered `art-<name>` host to `<name>`'s server (it
 strips the `art-` prefix as a fallback). No extra portless entry per worktree.
 
+##### Worktree cleanup (`worktrees-gc.sh`)
+
+`worktrees-gc.sh` (next to this `SKILL.md`, works in any repo — web or Expo)
+prunes agent worktrees under `.claude/worktrees/` whose work has landed. A
+worktree is removed only when **all three** hold: clean working tree, HEAD is an
+ancestor of `origin/<default-branch>` (detected — main, master, whatever
+origin/HEAD says), and nothing outside build dirs (`node_modules`, `.next`,
+`.expo`, `ios/build`, `ios/Pods`, `android/build`, `android/.gradle`) was
+touched in 6 hours — so a co-running agent session is never yanked. Everything
+kept is listed with its reason. `--dry-run` to preview. Run it after a ship
+lands, or whenever worktrees pile up; idempotent, never touches the main
+checkout. Note pnpm worktrees cost far less disk than `du` suggests
+(hard-linked store), so run this for hygiene, not panic.
+
+```bash
+cd <repo>
+/abs/path/to/cloudflare-tunnel-portless/worktrees-gc.sh --dry-run   # preview
+/abs/path/to/cloudflare-tunnel-portless/worktrees-gc.sh             # prune
+```
+
 #### Converting an existing project to portless
 
 For a project that runs `next dev` directly:
@@ -608,6 +628,7 @@ Cloudflare Tunnel + Caddy support WebSockets natively. If HMR doesn't work, chec
 <this-skill>/dev.sh                                       # dev-up/dev-down/dev-status (symlinked in ~/.local/bin)
 <this-skill>/metro-takeover.sh                            # Expo Metro worktree switcher
 <this-skill>/expo-qa.sh                                   # Expo fingerprint gate + EAS Update wt/ publish
+<this-skill>/worktrees-gc.sh                              # prune landed agent worktrees (any repo)
 <this-skill>/doctor.sh                                    # health check
 
 ~/.dev-up/<name>/                                         # per-server pidfile + log (dev-up state)
