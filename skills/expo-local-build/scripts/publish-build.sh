@@ -40,12 +40,20 @@ done
 
 if [[ -d "$SRC" ]]; then
   IPA="$SRC/$SLOT.ipa"
-  [[ -z "$LABEL" ]] && LABEL=$(basename "$(dirname "$(dirname "$IPA")")" | tr '.' '-')
 else
   IPA="$SRC"
-  [[ -z "$LABEL" ]] && LABEL=$(basename "$(dirname "$(dirname "$(dirname "$IPA")")")" | tr '.' '-')
 fi
 [[ -f "$IPA" ]] || die "no IPA at $IPA"
+if [[ -z "$LABEL" ]]; then
+  # Default label = the repo the IPA lives in (e.g. journeys.im → journeys-im),
+  # matching deliver.sh's convention. Fall back to the grandparent dir name.
+  repo_root=$(cd "$(dirname "$IPA")" && git rev-parse --show-toplevel 2>/dev/null || true)
+  if [[ -n "$repo_root" ]]; then
+    LABEL=$(basename "$repo_root" | tr '.' '-')
+  else
+    LABEL=$(basename "$(dirname "$(dirname "$IPA")")" | tr '.' '-')
+  fi
+fi
 
 # ---- token -------------------------------------------------------------------
 TOKEN="${BLOB_READ_WRITE_TOKEN:-}"
@@ -84,15 +92,17 @@ SIZE_MB=$(du -m "$IPA" | cut -f1)
 
 # ---- upload IPA + manifest ----------------------------------------------------
 blob_put() {  # $1 = file, $2 = pathname, $3 = content-type (optional)
-  local ct=()
+  # vercel CLI prints the Success URL to stderr when stdout is piped — capture
+  # both streams, strip ANSI, and never let grep's no-match kill the script.
+  local ct=() out
   [[ -n "${3:-}" ]] && ct=(--content-type "$3")
-  vercel blob put "$1" --access public --pathname "$2" --add-random-suffix true "${ct[@]}" 2>/dev/null \
-    | grep -oE 'https://[^ ]+' | head -1
+  out=$(vercel blob put "$1" --access public --pathname "$2" --add-random-suffix true "${ct[@]}" 2>&1 || true)
+  printf '%s' "$out" | sed $'s/\x1b\\[[0-9;]*m//g' | grep -oE 'https://[^ ]*\.blob\.vercel-storage\.com[^ ]*' | head -1 || true
 }
 
 log "publish-build: uploading IPA ($SIZE_MB MB) to Blob…"
-IPA_URL=$(blob_put "$IPA" "build-artifacts/$LABEL/$SLOT-$STAMP.ipa" "application/octet-stream")
-[[ -n "$IPA_URL" ]] || die "IPA upload failed (check the Blob token)"
+IPA_URL=$(blob_put "$IPA" "build-artifacts/$LABEL/$SLOT-$STAMP.ipa" "application/octet-stream") || true
+[[ -n "$IPA_URL" ]] || die "IPA upload failed (check the Blob token / vercel CLI output)"
 green "publish-build: IPA → $IPA_URL"
 
 cat > "$TMP/manifest.plist" <<EOF
@@ -113,7 +123,7 @@ cat > "$TMP/manifest.plist" <<EOF
   </dict></array>
 </dict></plist>
 EOF
-MANIFEST_URL=$(blob_put "$TMP/manifest.plist" "build-artifacts/$LABEL/$SLOT-$STAMP-manifest.plist" "text/xml")
+MANIFEST_URL=$(blob_put "$TMP/manifest.plist" "build-artifacts/$LABEL/$SLOT-$STAMP-manifest.plist" "text/xml") || true
 [[ -n "$MANIFEST_URL" ]] || die "manifest upload failed"
 ITMS="itms-services://?action=download-manifest&url=$(node -e "process.stdout.write(encodeURIComponent('$MANIFEST_URL'))")"
 green "publish-build: manifest → $MANIFEST_URL"
