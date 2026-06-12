@@ -1,6 +1,6 @@
 ---
 name: cloudflare-tunnel-portless
-description: Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on "dev-up", "spin up the dev server", "start the dev server", "test before shipping", "public URL for this worktree", "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
+description: Cloudflare-Tunnel-based ngrok replacement that multiplexes many local dev servers (via portless) through one wildcard subdomain, with per-project ingress for Expo. Includes `dev-up`/`dev-down`/`dev-status` (one-verb dev-server lifecycle for any checkout or worktree — env seeding, install, portless naming, public URL), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), and `doctor.sh` for health-checking the tunnel/portless chain. Triggers on "dev-up", "spin up the dev server", "start the dev server", "test before shipping", "public URL for this worktree", "set up cloudflare tunnel", "ngrok replacement", "public URL for localhost", "portless", "cloudflared", "metro-takeover", "switch metro to worktree", "expo-qa", "fingerprint gate", "is the dev client valid for this branch", "publish this branch as an EAS update", "QA this worktree on my phone", "tunnel doctor", "add project to tunnel", "onboard new mac to tunnel", or "debug caddy/portless/cloudflared".
 ---
 
 # Cloudflare Tunnel + portless
@@ -510,6 +510,30 @@ Click the deeplink (in iTerm, Ghostty, Warp, WezTerm — any OSC-8 terminal) on 
 
 The pnpm monorepo case is handled — `npx --no-install` doesn't always walk up to find the hoisted `expo` binary, so the script resolves `<app>/node_modules/.bin/expo` then `<root>/node_modules/.bin/expo` then `$PATH`. If none exist, set `MT_SCHEME` directly.
 
+#### Expo QA: fingerprint gate + EAS Update publish (`expo-qa.sh`)
+
+Metro takeover is the **inner loop** (HMR, one worktree at a time on the pinned port). `expo-qa.sh` (next to this `SKILL.md`) is the **correctness gate and the parallel review path**:
+
+```bash
+cd <any-worktree-of-the-project>
+/abs/path/to/cloudflare-tunnel-portless/expo-qa.sh gate                 # is the installed dev client valid for this branch?
+/abs/path/to/cloudflare-tunnel-portless/expo-qa.sh publish [--dry-run]  # gate, then eas update --branch wt/<branch>
+```
+
+**`gate`** computes the worktree's `@expo/fingerprint` hash (iOS by default, `--platform android` to switch) and compares it to the checkout on the repo's default branch. Match (exit 0) → the branch is JS-only relative to the baseline, so QA on the already-installed dev client — via Metro takeover or a published update — is valid. Mismatch (exit 2) → the branch changes the native layer; the shared dev client will NOT reflect it and any "verified on sim" claim through it is a false positive. The branch needs its own `eas build --profile development`. The differing fingerprint sources are printed so you can see *what* diverged. Run the gate before claiming any simulator verification on a worktree — this kills the verified-on-a-stale-native-client failure class, and it's the only protection on projects with a **pinned** `runtimeVersion` (where a native-drifted update would still load, then crash). On `runtimeVersion: { policy: 'fingerprint' }` projects the gate predicts whether a published update will even be loadable.
+
+**`publish`** runs the gate, then `eas update --branch wt/<branch>` from the app dir with the dev script's env applied (so `APP_VARIANT`-style config variants resolve the same as the running dev client), and emits a dev-client deeplink (`<scheme>://expo-development-client/?url=<u.expo.dev update URL>`). This is the parallel-QA bus: N worktrees publish concurrently with zero Metro/port/sim contention, and any dev client — a simulator or a physical phone, no Mac involved — can load any branch. ~1–2 min publish latency, no HMR: it's the review path, not the dev loop; the two compose. The `wt/` branch prefix is enforced and publishing from the default branch is refused, so a publish can never reach a release channel (channels map to branches explicitly; nothing maps to `wt/*`). `--dry-run` prints the exact command without publishing. Where a project's OTA releases require separate authorization (e.g. myapp), that covers *channel-mapped* branches — `wt/*` QA publishes are agent infrastructure, but still surface them in your report.
+
+| Variable | Default source | Override |
+|---|---|---|
+| App dir | git root, prefer `<root>/app` with an expo dep | `EQ_APP_DIR` |
+| Baseline | the git worktree checked out on the default branch | `EQ_BASELINE_DIR` |
+| Platform | `ios` | `EQ_PLATFORM` / `--platform` |
+| Scheme | `app.json` → `expo config --json` with dev-script env | `EQ_SCHEME` |
+| Message | last commit subject | `--message` |
+
+pnpm gotcha (verified on journeys.im): each tree is fingerprinted with **its own** `node_modules/.bin/fingerprint` — a bin borrowed from another checkout resolves sources through its own symlinked store and hashes an identical tree differently. The script handles this; it also warns when the two trees carry different `@expo/fingerprint` versions (a mismatch may then be algorithm drift, not native drift). Both trees must have deps installed.
+
 ## Adding new projects later
 
 | Action | Cost |
@@ -583,6 +607,7 @@ Cloudflare Tunnel + Caddy support WebSockets natively. If HMR doesn't work, chec
 <this-skill>/pubproxy.js                                  # the proxy script itself
 <this-skill>/dev.sh                                       # dev-up/dev-down/dev-status (symlinked in ~/.local/bin)
 <this-skill>/metro-takeover.sh                            # Expo Metro worktree switcher
+<this-skill>/expo-qa.sh                                   # Expo fingerprint gate + EAS Update wt/ publish
 <this-skill>/doctor.sh                                    # health check
 
 ~/.dev-up/<name>/                                         # per-server pidfile + log (dev-up state)
