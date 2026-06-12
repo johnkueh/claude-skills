@@ -565,6 +565,7 @@ cd <any-worktree-of-the-project>
 | Platform | `ios` | `EQ_PLATFORM` / `--platform` |
 | Scheme | `app.json` → `expo config --json` with dev-script env | `EQ_SCHEME` |
 | Message | last commit subject | `--message` |
+| EAS environment | `development` (eas-cli requires one in non-interactive mode) | `EQ_EAS_ENV` / `--environment` |
 
 pnpm gotcha (verified on journeys.im): each tree is fingerprinted with **its own** `node_modules/.bin/fingerprint` — a bin borrowed from another checkout resolves sources through its own symlinked store and hashes an identical tree differently. The script handles this; it also warns when the two trees carry different `@expo/fingerprint` versions (a mismatch may then be algorithm drift, not native drift). Both trees must have deps installed.
 

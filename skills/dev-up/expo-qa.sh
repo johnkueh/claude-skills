@@ -46,17 +46,19 @@ VERB="${1:-}"
 shift
 
 PLATFORM="${EQ_PLATFORM:-ios}"
+EAS_ENV="${EQ_EAS_ENV:-development}"   # eas-cli requires --environment in non-interactive mode
 MESSAGE=""
 SKIP_GATE=0
 DRY_RUN=0
 JSON_OUT=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --platform)  PLATFORM="$2"; shift 2 ;;
-    --message)   MESSAGE="$2"; shift 2 ;;
-    --skip-gate) SKIP_GATE=1; shift ;;
-    --dry-run)   DRY_RUN=1; shift ;;
-    --json)      JSON_OUT=1; shift ;;
+    --platform)    PLATFORM="$2"; shift 2 ;;
+    --message)     MESSAGE="$2"; shift 2 ;;
+    --environment) EAS_ENV="$2"; shift 2 ;;
+    --skip-gate)   SKIP_GATE=1; shift ;;
+    --dry-run)     DRY_RUN=1; shift ;;
+    --json)        JSON_OUT=1; shift ;;
     *) die "unknown flag: $1" ;;
   esac
 done
@@ -244,7 +246,7 @@ while IFS= read -r kv; do ENV_ARGS+=("$kv"); done < <(
   printf '%s' "$DEV_SCRIPT" | grep -oE '[A-Z_][A-Z0-9_]*=[^ ]+' || true
 )
 
-EAS_CMD=(eas update --branch "$EAS_BRANCH" --message "$MESSAGE" --platform "$PLATFORM" --non-interactive --json)
+EAS_CMD=(eas update --branch "$EAS_BRANCH" --message "$MESSAGE" --platform "$PLATFORM" --environment "$EAS_ENV" --non-interactive --json)
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   log ""
