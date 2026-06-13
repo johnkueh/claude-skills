@@ -81,22 +81,28 @@ unset EXPO_TOKEN
 
 eas build --local --non-interactive "$@"
 
-# Build succeeded (set -e) — record the fingerprint this client was built from
-# so expo-qa's gate (dev-up skill) can flag a stale installed client.
-# Dev profile only; fail-soft so recording problems never break a build.
-EXPO_QA="$HOME/Projects/claude-skills/skills/dev-up/expo-qa.sh"
-if printf '%s ' "$@" | grep -q -- '--profile development' && [ -x "$EXPO_QA" ]; then
-  platform=ios
-  printf '%s ' "$@" | grep -q -- '--platform android' && platform=android
-  EQ_PLATFORM="$platform" "$EXPO_QA" record || true
-fi
+# Build succeeded — shared post-build tail. Records the dev-client fingerprint
+# (for expo-qa's stale-client gate) AND publishes the artifact to the project's
+# builds canvas. Dev-profile only, fail-soft; no-op if the skill is absent.
+POST_BUILD="$HOME/Projects/claude-skills/skills/expo-local-build/scripts/post-build.sh"
+[ -x "$POST_BUILD" ] && "$POST_BUILD" "$@" || true
 ```
 
-`chmod +x` it. The trailing block pins what native baseline the dev client was
-built from (`~/.expo-qa/<app>-<platform>.json`) so the dev-up skill's
-`expo-qa.sh gate` can say "your installed client is stale — rebuild" *before*
-you publish an update that would grey out on the device. Harmless if the
-dev-up skill is absent.
+`chmod +x` it. The PATH preamble is the only per-project part you adapt; the
+trailing one-liner hands off to `scripts/post-build.sh`, which is the single
+source of truth for the two mechanical after-build steps (don't re-inline
+them):
+
+1. **`expo-qa record`** — pins the native baseline the dev client was built
+   from (`~/.expo-qa/<app>-<platform>.json`) so the dev-up skill's
+   `expo-qa.sh gate` can warn "your installed client is stale — rebuild"
+   *before* you publish an update that would grey out on the device.
+2. **`publish-build`** — auto-delivers the `--output` artifact to the project's
+   "<label> builds" canvas, so the latest installable build is always one tap
+   away (no manual publish step).
+
+Both are dev-profile only and fail-soft — a hiccup never fails a build that
+already succeeded — and both no-op cleanly if the skills aren't installed.
 
 ### 2. `app/package.json` — one script per slot
 
