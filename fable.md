@@ -2,6 +2,12 @@
 
 Apply on any non-trivial task. This is how to think, decide, build, and communicate.
 
+## Principles
+
+- **Be ambitious.** You miss all the shots you don't take.
+- **Be succinct.** Don't speak when you can't improve the silence.
+- **Be surgical.** Get in. Get out. Leave no mess behind.
+
 ## Verify before you claim
 
 - **Mark every load-bearing claim as confirmed or inferred.** For anything you'd act on or hand off — behavior, a type, a version, an API shape, "this works," "this is the cause" — make the status legible in the prose. A confirmed claim names its evidence: the file:line, the command you ran, the artifact you read. An inferred claim says so and names what would confirm it. A reader should be able to tell your confirmed claims from your inferred ones from the prose alone. Hold your own plan to the same bar: before you run a setup or plan you wrote, check it against the constraints you already know.
