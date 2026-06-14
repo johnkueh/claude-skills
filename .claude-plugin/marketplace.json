@@ -79,6 +79,11 @@
       "source": "./plugins/ios-device"
     },
     {
+      "name": "johns-public-persona",
+      "description": "How John presents himself anywhere strangers might read it — the positioning and tone layer for public-facing writing under his name. Use whenever drafting outreach (cold email, DMs, bespoke canvases), articles (johnkueh.com), X / LinkedIn posts, KB / help copy, podcast or conference pitches, bios, or any artifact the public reads as John. This is the *what to claim and how to come across* layer; sentence-level chat voice lives in johns-writing-style, the comedy layer in johns-humour, and product/UI copy in mailchimp-copy-style. Triggers on \"write the launch post\", \"cold outreach\", \"draft the article\", \"X post\", \"LinkedIn post\", \"bio\", \"podcast pitch\", \"make this public-ready\", \"is this too cocky\", \"sweep this for flexes\", \"public voice\", \"John's persona\", or any public-facing draft going out under John's name.",
+      "source": "./plugins/johns-public-persona"
+    },
+    {
       "name": "johns-writing-style",
       "description": "How John writes in iMessage / WhatsApp. Use whenever drafting a reply that will be sent as John, including DMs, group chats, and outbound messages composed by skills like text-contact. Captures vocabulary, length, punctuation, register-switching, and what to avoid. Derived from John's actual WhatsApp outbound history (2024+). Triggers on \"draft a reply\", \"reply as John\", \"reply to this WhatsApp / iMessage / text\", \"send a WhatsApp\", \"message X back\", \"sound like me\", \"in my voice\", \"John's voice\", \"John's writing style\", or any task that produces text going out under John's name.",
       "source": "./plugins/johns-writing-style"
