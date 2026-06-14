@@ -104,6 +104,11 @@
       "source": "./plugins/serp-data"
     },
     {
+      "name": "ship-it",
+      "description": "A standing ship authorization. When you say \"ship it\" about a plan discussed in the session, the agent executes it in a git worktree, validates it locally, and pushes to main — but only if there's no regression risk, with no per-step re-asking. Covers two trigger tiers (a hard \"ship it\" that runs the whole flow including the push, and soft go-words that still confirm before the irreversible push), the local confidence gate, pushing straight to remote main from the worktree, prod smoke-testing, and cleanup. Triggers on \"ship it\", \"ship this\", \"ship to main\", \"execute and ship\", and on go-words (\"do it\", \"let's go\", \"go ahead\", \"run it\") about a code-change plan whose natural endpoint is shipping.",
+      "source": "./plugins/ship-it"
+    },
+    {
       "name": "slack-search",
       "description": "Search Slack messages and fetch threads. Use when the user asks to find Slack conversations, look up a colleague, list channels, or pull a specific thread by URL. Personal-token-based (xoxp-...). Triggers on \"search Slack\", \"find that Slack thread\", \"what did X say in Slack\", \"Slack DM history\", \"pull this Slack URL\", \"who in [channel]\", \"Slack message about\", \"look up [name] on Slack\", or any Slack permalink (slack.com/archives/...).",
       "source": "./plugins/slack-search"
