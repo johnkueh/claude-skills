@@ -13,11 +13,12 @@
 #   dev-flow prep                 run hooks.prep (else: dev-up covers env seed)
 #   dev-flow gate                 run hooks.gate (REQUIRED; passes exit code)
 #   dev-flow smoke [args...]      run hooks.smoke (forwards args, e.g. --email)
-#   dev-flow gc                   run hooks.gc, else dev-up's worktrees-gc.sh
+#   dev-flow gc                   run hooks.gc, else dev-up's worktrees-gc.sh (REPO-WIDE sweep)
+#   dev-flow teardown [--keep-branch]  retire THIS worktree once its PR landed (squash-safe)
 #   dev-flow deploy-type          print the deploy field
 #   dev-flow init                 scaffold a starter .workflow.json
 #   dev-flow pr open  --title T [--body-file F] [--canvas URL] [--proof img...]
-#   dev-flow pr merge [--squash]
+#   dev-flow pr merge [--squash] [--keep-branch]   (deletes the remote branch by default)
 #
 # Idempotent. Every error prints the concrete fix command (doctor.sh house
 # style). set -euo pipefail.
@@ -188,6 +189,9 @@ cmd_smoke() {
 
 cmd_gc() {
   require_manifest
+  # REPO-WIDE sweep — it can prune ANY landed+idle worktree, including another
+  # session's. To retire just the worktree you shipped, use `dev-flow teardown`.
+  yellow "dev-flow gc is a REPO-WIDE sweep (may prune other sessions' worktrees) — for just this one use: dev-flow teardown"
   local gc; gc=$(mf 'm.get("hooks",{}).get("gc")')
   if [[ -n "$gc" ]]; then
     note "gc: $gc  (in $REPO_ROOT)"
@@ -484,13 +488,37 @@ pr_open() {
 
 pr_merge() {
   require_gh
-  local squash=(--merge)
-  if [[ "${1:-}" == "--squash" ]]; then squash=(--squash); shift; fi
+  local squash=(--merge) keep_branch=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --squash)      squash=(--squash); shift ;;
+      --keep-branch) keep_branch=1; shift ;;
+      *) die "dev-flow pr merge: unknown arg \"$1\"" 'dev-flow pr merge [--squash] [--keep-branch]' ;;
+    esac
+  done
   # merge now — this is the deploy trigger
   local out
   if out=$(gh pr merge "${squash[@]}" 2>&1); then
     green "PR merged"
     printf '%s\n' "$out"
+    # Delete the merged remote branch. gh's own --delete-branch couples in the
+    # local checkout (it tries to switch off the branch) which is fragile inside
+    # a worktree, so we delete the REMOTE explicitly here and leave the local
+    # branch for `dev-flow teardown`. A squash merge in particular leaves the
+    # remote branch behind otherwise (it never auto-deletes on squash).
+    if [[ "$keep_branch" == 0 ]]; then
+      local branch default_branch
+      branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+      default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || true)
+      default_branch="${default_branch:-main}"
+      if [[ -n "$branch" && "$branch" != "HEAD" && "$branch" != "$default_branch" ]]; then
+        if git push origin --delete "$branch" >/dev/null 2>&1; then
+          green "deleted remote branch origin/$branch"
+        else
+          note "remote branch origin/$branch already gone (or no delete perms) — skipped"
+        fi
+      fi
+    fi
     return 0
   fi
   printf '%s\n' "$out" >&2
@@ -509,8 +537,83 @@ cmd_pr() {
   case "${1:-}" in
     open)  shift; pr_open "$@" ;;
     merge) shift; pr_merge "$@" ;;
-    *) die "usage: dev-flow pr open --title T [...] | dev-flow pr merge [--squash]" ;;
+    *) die "usage: dev-flow pr open --title T [...] | dev-flow pr merge [--squash] [--keep-branch]" ;;
   esac
+}
+
+# ---- teardown ----------------------------------------------------------------
+# Retire the CURRENT worktree after its change has LANDED, then delete its branch
+# (local + remote). SQUASH-SAFE: a branch counts as landed if its PR is MERGED
+# (via gh) OR HEAD is an ancestor of origin/<default> — so a `pr merge --squash`,
+# which rewrites the SHA and defeats ancestry, is still recognised. Removes ONLY
+# this worktree; it NEVER touches sibling worktrees. That is the whole point: the
+# repo-wide sweep (`dev-flow gc`) can prune another session's worktree, so it is
+# the wrong tool for "tear down the thing I just shipped" — use this instead.
+cmd_teardown() {
+  local keep_branch=0
+  [[ "${1:-}" == "--keep-branch" ]] && keep_branch=1
+
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "not inside a git checkout"
+
+  local wt branch main_wt default_branch
+  wt=$(git rev-parse --show-toplevel)
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+  [[ "$branch" != "HEAD" ]] || die "detached HEAD — remove the worktree manually" \
+      "git worktree remove --force \"$wt\""
+
+  # main worktree = the first entry git lists (the non-linked working tree)
+  main_wt=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+  [[ -n "$main_wt" ]] || die "could not resolve the main worktree"
+  [[ "$wt" != "$main_wt" ]] || die "refusing to teardown the MAIN checkout ($wt)" \
+      "run dev-flow teardown from inside a linked worktree, not the main checkout"
+
+  default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || true)
+  default_branch="${default_branch:-main}"
+  [[ "$branch" != "$default_branch" ]] || die "this worktree is on the default branch ($branch) — nothing to retire"
+
+  # Refuse to force-discard WIP: removal is --force (to clear gitignored prep
+  # seeds), so any tracked-but-uncommitted or untracked file would be silently
+  # lost. .gitignored seeds (.env*, next-env.d.ts) don't show in --porcelain.
+  if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
+    die "worktree has uncommitted or untracked changes — refusing to teardown (would --force-discard them)" \
+        "commit/stash them first, or remove by hand: git worktree remove --force \"$wt\""
+  fi
+
+  # --- landed check (squash-safe) ---
+  git fetch origin "$default_branch" -q 2>/dev/null || true
+  local landed="" reason=""
+  if git merge-base --is-ancestor HEAD "origin/$default_branch" 2>/dev/null; then
+    landed=1; reason="HEAD is an ancestor of origin/$default_branch"
+  elif command -v gh >/dev/null 2>&1; then
+    local state
+    state=$(gh pr view "$branch" --json state -q .state 2>/dev/null || true)
+    [[ "$state" == "MERGED" ]] && { landed=1; reason="PR for $branch is MERGED (squash-safe)"; }
+  fi
+  [[ -n "$landed" ]] || die "branch \"$branch\" is not landed — no ancestry on origin/$default_branch and no MERGED PR" \
+      "land it first: dev-flow pr merge   (then re-run dev-flow teardown)"
+
+  note "retiring worktree: $wt"
+  note "  landed: $reason"
+
+  # Remove the worktree. Must run from OUTSIDE the worktree being removed, so the
+  # git call is made from the main checkout (subshell — the caller's shell cwd is
+  # untouched). --force because prep seeds gitignored .env*/next-env.d.ts that a
+  # plain remove would refuse over.
+  ( cd "$main_wt" && git worktree remove --force "$wt" ) \
+    || die "git worktree remove failed for $wt" \
+           "cd \"$main_wt\" && git worktree remove --force \"$wt\""
+  green "removed worktree $wt"
+
+  if [[ "$keep_branch" == 0 ]]; then
+    git -C "$main_wt" branch -D "$branch" >/dev/null 2>&1 && green "deleted local branch $branch" || true
+    if git -C "$main_wt" push origin --delete "$branch" >/dev/null 2>&1; then
+      green "deleted remote branch origin/$branch"
+    else
+      note "remote branch origin/$branch already gone — skipped"
+    fi
+  fi
+
+  yellow "shell is still in the removed dir — run:  cd \"$main_wt\""
 }
 
 # ---- help / dispatch ---------------------------------------------------------
@@ -525,11 +628,13 @@ dev-flow — project-agnostic dev workflow runner (reads <repo>/.workflow.json)
   dev-flow prep                 run hooks.prep (else: dev-up covers env seeding)
   dev-flow gate                 run hooks.gate (REQUIRED; nonzero exit = do NOT ship)
   dev-flow smoke [args...]      run hooks.smoke, forwarding args (e.g. --email)
-  dev-flow gc [args...]         run hooks.gc, else dev-up's worktrees-gc.sh
+  dev-flow gc [args...]         run hooks.gc, else dev-up's worktrees-gc.sh (REPO-WIDE)
+  dev-flow teardown [--keep-branch]  retire THIS worktree once its PR landed (squash-safe);
+                                deletes its branch local+remote. Use this, not gc, per worktree.
   dev-flow deploy-type          print the deploy field (auto-vercel|ota|native-rebuild|none)
   dev-flow init                 scaffold a starter .workflow.json
   dev-flow pr open  --title T [--body-file F] [--canvas URL] [--proof img...]
-  dev-flow pr merge [--squash]
+  dev-flow pr merge [--squash] [--keep-branch]   deletes the remote branch on merge by default
 
 The manifest lives at <repo-root>/.workflow.json (walked up from cwd, like git).
 EOF
@@ -544,6 +649,7 @@ main() {
     gate)        cmd_gate "$@" ;;
     smoke)       cmd_smoke "$@" ;;
     gc)          cmd_gc "$@" ;;
+    teardown)    cmd_teardown "$@" ;;
     deploy-type) cmd_deploy_type "$@" ;;
     init)        cmd_init "$@" ;;
     pr)          cmd_pr "$@" ;;
