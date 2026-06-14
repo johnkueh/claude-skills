@@ -54,6 +54,11 @@
       "source": "./plugins/expo-local-build"
     },
     {
+      "name": "goto-project",
+      "description": "Resolve a short project name to its repo under ~/Projects, cd in, and load that repo's context before doing the actual task. Use whenever John starts a request with \"go into X\", \"in X, ...\", \"switch to X\", \"open X\", \"over in X\", or just names a project as the place to work — e.g. drafty, drafty.im, marky, johnkueh.com, glp3, journeys, recipes, clove, subs.rip, claude-skills, bq-analytics. Sessions start at ~/Projects, so the target repo's CLAUDE.md is NOT auto-loaded — this skill is how it gets loaded.",
+      "source": "./plugins/goto-project"
+    },
+    {
       "name": "gpt-image-gen-2",
       "description": "Generate images, illustrations, logos, infographics, photoreal shots, UI mockups, and ads with OpenAI's GPT Image 2. Translates the user's loose request into a cookbook-aligned prompt, supports reference images / moodboards for style transfer, and logs token usage + actual $ cost per call. Triggers on \"make me a logo\", \"generate an image of…\", \"create an illustration\", \"design a poster\", \"gpt-image-gen\", \"gpt image\", \"image generation\", \"moodboard\", \"style transfer from this image\", or any visual asset request.",
       "source": "./plugins/gpt-image-gen-2"
@@ -97,6 +102,11 @@
       "name": "notion-page",
       "description": "Read the full content of a Notion page from a URL or page ID. Returns title, metadata, and the page body as markdown. Use when the user pastes a Notion link or asks to read, summarize, or extract content from a Notion page. Triggers on notion.so URLs, \"read this notion page\", \"fetch from notion\", \"what's in this notion doc\".",
       "source": "./plugins/notion-page"
+    },
+    {
+      "name": "proof-canvas",
+      "description": ">",
+      "source": "./plugins/proof-canvas"
     },
     {
       "name": "reddit-miner",
