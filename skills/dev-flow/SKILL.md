@@ -72,7 +72,14 @@ Not a bug or feature against a built surface → this flow doesn't apply. Do the
 
 ## Decision gates
 
-**When confident enough to PR.** All of: the repro is green (bug) or the flow works on its real surface (feature); `dev-flow gate` exits zero against a captured baseline; visual work has been looked at, not just compiled; the happy path has been exercised once for real on the surface a user hits. Then push proof and open the PR: visual work ends with a **proof-canvas** (required by John's standing rules and ship-it) — push the screenshots, put the bare URL in the report, send the PNGs via SendUserFile. `dev-flow pr open` bakes the canvas link and proof refs into the PR body.
+**When confident enough to PR.** All of: the repro is green (bug) or the flow works on its real surface (feature); `dev-flow gate` exits zero against a captured baseline; visual work has been looked at, not just compiled; the happy path has been exercised once for real on the surface a user hits.
+
+**Drive the change on its real surface before opening the PR — `dev-flow gate` green is necessary but NOT sufficient.** The gate is a server/build/contract check; it is structurally blind to runtime and interaction (a leak-freeness break still *looks* like a working gate; a green ship-check ≠ a verified feature). So before `dev-flow pr open`, actually exercise the changed flow:
+- **Web / PWA** → **agent-browser** (or the `run` skill) against the running dev server — click the real button, submit the real form, watch the real console/network. For a PWA or mobile-Safari target, drive it there, not just headless desktop Chrome.
+- **Mobile (RN/Expo)** → **argent** on the iOS simulator / Android emulator — tap through the changed screen via the discovery→tap loop, never from a guess.
+This is the one check that catches "compiles and the suite's green, but the trigger never fires on the real device." Capture the screenshots here — they're the proof.
+
+Then push proof and open the PR: visual work ends with a **proof-canvas** (required by John's standing rules and ship-it) — push the screenshots, put the bare URL in the report, send the PNGs via SendUserFile. `dev-flow pr open` bakes the canvas link and proof refs into the PR body.
 
 **When to merge.** Confident, no regression risk, edge cases covered → `dev-flow pr merge` (this is the deploy trigger). Anything flaky, unverifiable, or half-done → leave the PR open, report exactly what passed and what's uncertain, don't hedge-merge. A non-fast-forward rejection means main moved under you: re-sync the branch onto `origin/main`, re-run the gate on what changed, retry.
 
