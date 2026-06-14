@@ -16,10 +16,11 @@ Each repo carries a `<repo-root>/.workflow.json` manifest that points the generi
 - `dev-flow prep` — repo-specific worktree bootstrap (extras beyond what `dev-up` already seeds)
 - `dev-flow gate` — the full local confidence gate (REQUIRED hook; nonzero = do not ship)
 - `dev-flow smoke [args...]` — read-only post-deploy prod smoke (optional)
-- `dev-flow gc` — prune landed worktrees (falls back to dev-up's generic GC)
+- `dev-flow teardown [--keep-branch]` — retire THE CURRENT worktree once its PR landed, then delete its branch (local + remote). Squash-safe (recognises a MERGED PR via gh, not just ancestry). This is the per-worktree teardown — use it, not `gc`.
+- `dev-flow gc` — REPO-WIDE sweep of landed+idle worktrees (falls back to dev-up's generic GC). It can prune another session's worktree — reserve it for explicit cleanup, never routine teardown.
 - `dev-flow deploy-type` — prints `auto-vercel | ota | native-rebuild | none` so you know how landing reaches users
 - `dev-flow pr open --title T [--body-file F] [--canvas URL] [--proof img...]` — push branch, open PR with canvas + proof baked into the body
-- `dev-flow pr merge [--squash]` — merge now (this is the deploy trigger)
+- `dev-flow pr merge [--squash] [--keep-branch]` — merge now (this is the deploy trigger); deletes the remote branch by default
 
 Run `dev-flow doctor` early when a repo is new to you — a missing or stale manifest is the one thing that turns this flow back into guesswork.
 
@@ -93,7 +94,7 @@ Then push proof and open the PR: visual work ends with a **proof-canvas** (requi
 
 - **Single-threaded.** No parallel subagents in the runtime flow. One piece of work at a time; v2 territory otherwise.
 - **Push from the worktree to GitHub — NEVER merge the branch into the local main checkout.** That checkout is stale and usually parked on John's WIP; the exit-time local merge is where every agent merge-conflict incident came from. Land via the PR (`dev-flow pr open` → `pr merge`), straight to remote main.
-- **Exit the worktree once landed + smoke-tested.** Confirm it actually landed (HEAD is an ancestor of `origin/main`) before tearing down: `dev-down` whatever dev-up started, ExitWorktree (remove), then `dev-flow gc` to sweep strays. Leave the main checkout exactly as found.
+- **Exit the worktree once landed + smoke-tested.** `dev-down` whatever dev-up started, then `dev-flow teardown` — it confirms the change actually landed (MERGED PR via gh, or HEAD an ancestor of `origin/main` — so a `--squash` merge, which rewrites the SHA, is still recognised), removes THIS worktree, and deletes its branch local + remote. Don't reach for `dev-flow gc` here: it's a repo-wide sweep that can prune another session's worktree. Leave the main checkout exactly as found.
 
 ## RN/Expo reality — honest
 
