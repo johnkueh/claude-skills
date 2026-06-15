@@ -47,11 +47,36 @@ wacli sync --follow >/tmp/wacli-sync.log 2>&1 &
 
 ## Always pass `--json` when an agent is consuming output
 
-Default output is human-formatted (columns, truncation). `--json` produces structured rows that pipe straight into `jq`. Use it everywhere the result feeds back to Claude.
+Default output is human-formatted (columns, truncation, **senders shown as bare `@lid` numbers**). `--json` produces structured rows that pipe straight into `jq`. Use it everywhere the result feeds back to Claude — and **never attribute a quote from the human output** (see "Attribution" below).
+
+Every `--json` response is an envelope: `{"success":bool, "data":…, "error":…}`. The payload is under `.data`:
+
+- `messages list/search` → `.data.messages[]`, each with PascalCase keys: `ChatJID`, `ChatName`, `SenderJID`, `Timestamp`, `FromMe`, `Text`, `DisplayText`, `MediaType`, `Snippet`.
+- `chats list` → `.data[]` with `JID`, `Kind`, `Name`, `LastMessageTS`.
+- `contacts search` → `.data[]` with `JID`, `Phone`, `Name`, `Alias`, `Tags`.
 
 ```sh
-wacli messages search "magic tags" --limit 20 --json | jq '.[] | {chat, sender, ts, text}'
+wacli messages search "magic tags" --limit 20 --json \
+  | jq '.data.messages[] | {ChatName, FromMe, Timestamp, Text}'
 ```
+
+## Attribution — who sent each message (read before quoting anyone)
+
+Getting "who said X" wrong is the most common and most damaging wacli mistake. Two traps cause it; both are avoided by the same two rules.
+
+1. **`FromMe` is the only reliable speaker signal — never infer the sender from the JID or the human output.** In a DM both sides come back. Only the account owner is reliably identifiable, via the boolean `FromMe`. The other party's `SenderJID` is a raw `@lid` (e.g. `191624378347690@lid`), not a name, and the same person appears under device variants (`…@lid`, `…:19@lid`). The human output prints your messages as `me` and theirs as the bare `@lid`. **Rule: attribute every quote from `FromMe` — `true` = the account owner (you), `false` = the other party.** Resolve a `@lid` to a name with `wacli contacts search`/`show` only for labelling, never for deciding direction.
+
+2. **`Text` is the message's own words; `DisplayText`/`Snippet` bundle quoted-reply context — so a search can pin a phrase on the wrong author.** When B replies to A, B's `DisplayText`/`Snippet` contains A's quoted line, so a substring search matches *both* A's original *and* B's reply — making it look like B said A's words. **Rule: when deciding who said a phrase, match the `Text` field only — never `DisplayText` or `Snippet`.**
+
+Correct attribution recipe — a clean transcript labelled by `FromMe`, using each message's own `Text`:
+
+```sh
+wacli messages list --chat <jid> --limit 200 --json \
+  | jq -r '.data.messages[] | select(.Text != "")
+           | (if .FromMe then "ME  " else "THEM" end) + " | " + .Timestamp + " | " + .Text'
+```
+
+Build any "who said what" answer from this — not from the human output, not from `DisplayText`. If a phrase isn't in anyone's own `Text` (only in quoted replies), it means nobody in the window said it as their own message — don't attribute it, and `history backfill` if it predates the sync window.
 
 ## Read recipes
 
@@ -174,7 +199,7 @@ pkill -f 'wacli sync' && wacli doctor
 
 ```sh
 wacli messages search "X" --limit 30 --json \
-  | jq '.[] | {chat, sender, ts, text}'
+  | jq '.data.messages[] | {ChatName, FromMe, Timestamp, Text}'
 ```
 
 If a hit looks promising, fetch context:
@@ -186,14 +211,14 @@ wacli messages context --chat <jid> --id <message-id> --before 8 --after 8 --jso
 ### "Send Alice the link to Y"
 
 ```sh
-ALICE=$(wacli contacts search "Alice" --json | jq -r '.[0].jid')
+ALICE=$(wacli contacts search "Alice" --json | jq -r '.data[0].JID')
 wacli send text --to "$ALICE" --message "Y: https://..."
 ```
 
 ### "What's in the family group lately?"
 
 ```sh
-GROUP=$(wacli groups list --json | jq -r '.[] | select(.name=="Family") | .jid')
+GROUP=$(wacli groups list --json | jq -r '.data[] | select(.Name=="Family") | .JID')
 wacli messages list --chat "$GROUP" --limit 50 --after $(date -v-7d +%Y-%m-%d) --json
 ```
 
@@ -217,5 +242,6 @@ Every command supports:
 - Don't run `wacli send ...` while a `wacli sync --follow` is up — store is locked. Stop sync first.
 - Don't paste a phone number with `+` or spaces to `--to` — strip to digits only (e.g. `61400000000`).
 - Don't try to send to a JID you fished out of message metadata that ends in `@lid` (linked device alias) — use the `@s.whatsapp.net` form. `wacli contacts show` returns the right one.
+- Don't attribute a quote from the sender JID, the human output, or `DisplayText`/`Snippet` — only `FromMe` (direction) + the message's own `Text` (content) are reliable. See "Attribution" above.
 - Don't expect old history to be there. Run `wacli history backfill` for a specific chat if the user asks about messages older than the sync window.
 - Don't commit `~/.wacli/` — it contains session keys.
