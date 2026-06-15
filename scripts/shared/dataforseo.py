@@ -1,7 +1,7 @@
 """Shared DataForSEO API client used by the keyword-data and serp-data skills.
 
 CANONICAL COPY. The build script (scripts/build-marketplace.ts) syncs this file
-into skills/keyword-data/dataforseo.py and skills/serp-data/dataforseo.py so
+into skills/marketing-keyword-data/dataforseo.py and skills/marketing-serp/dataforseo.py so
 each skill stays self-contained when distributed as a single plugin.
 Edit THIS file, then run `bun scripts/build-marketplace.ts` to propagate.
 

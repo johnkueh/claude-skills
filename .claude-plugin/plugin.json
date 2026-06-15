@@ -1,7 +1,7 @@
 {
   "name": "claude-skills",
-  "version": "1.24.0",
-  "description": "Collection of Claude Code skills: DataForSEO keyword/SERP research, YouTube transcripts, Vercel logs, expo-local-build (local EAS builds + delivery), InstantDB app builder, Notion page reader, wacli (WhatsApp CLI), johns-writing-style (John's iMessage/WhatsApp voice), johns-public-persona (public-facing positioning + tone), brand-copy (Mailchimp-based copy guide for app surfaces + marketing), brand-design (house UI/UX design playbook for app + web surfaces), slack-search, system-memory-cleanup, system-disk-cleanup, x-monitor, gpt-image-gen-2 (GPT Image 2), veo-video-gen (Veo 3.1 video), drafty-proof-canvas (visual proof canvases), dev-flow (project-agnostic dev workflow on a per-repo .workflow.json contract), ship-it (standing ship authorization).",
+  "version": "1.25.0",
+  "description": "Collection of Claude Code skills, organized by department prefix: dev-* (engineering: dev-flow, dev-up, dev-ship, dev-goto, dev-expo, dev-instantdb, dev-vercel-logs), marketing-* (SEO/growth: keyword/SERP research, AEO + crawler monitoring, reddit/youtube mining, x), comms-* (slack, whatsapp, notion), media-* (image-gen, video-gen, icon-search), brand-* (copy + design house style), data-* (digest), system-* (macOS hygiene), johns-* (founder voice), plus drafty-proof-canvas (visual proof canvases).",
   "author": {
     "name": "John Kueh",
     "url": "https://github.com/johnkueh"
