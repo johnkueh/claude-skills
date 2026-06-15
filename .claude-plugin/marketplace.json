@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "claude-skills",
-      "description": "The full collection of John Kueh's Claude Code skills in one install: research (Exa, DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, iOS device, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
+      "description": "The full collection of John Kueh's Claude Code skills in one install: research (DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
       "source": "./"
     },
     {
@@ -24,18 +24,13 @@
       "source": "./plugins/ai-crawler-report"
     },
     {
-      "name": "claude-fm",
-      "description": "Toggle Claude FM — a single command that starts or stops background YouTube audio (lo-fi by default) playing straight in the terminal while you work. Use when the user says \"play music\", \"claude fm\", \"start the music\", \"lofi\", \"stop the music\", \"background music\", or \"/music\". One call toggles: plays if silent, stops if already playing.",
-      "source": "./plugins/claude-fm"
-    },
-    {
       "name": "daily-digest",
       "description": "Per-project daily digest of new signups, top user activities, API/LLM costs, and recently-changed initiative docs — pulled from bq-analytics where available, plus git activity and the latest x-monitor run. Use when the user wants a \"morning digest\" across their projects, says \"give me yesterday's roundup\", or asks for a recurring summary across your projects. Designed to be invoked daily via `/loop`.",
       "source": "./plugins/daily-digest"
     },
     {
       "name": "dev-flow",
-      "description": "John's master development workflow — the reasoning layer that takes a request from \"go work on X\" to landed-and-verified. Use when John says \"go work on <project>\", names a project plus a task, \"fix this bug\", \"implement this feature\", or fires a ship go-word (\"ship it\", \"do it\", \"let's go\") about a code-change plan. It routes (delegates to goto-project), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to ship-it for the standing ship authorization itself, to goto-project for routing, and to proof-canvas for visual proof. Do NOT duplicate those skills.",
+      "description": "John's master development workflow — the reasoning layer that takes a request from \"go work on X\" to landed-and-verified. Use when John says \"go work on <project>\", names a project plus a task, \"fix this bug\", \"implement this feature\", or fires a ship go-word (\"ship it\", \"do it\", \"let's go\") about a code-change plan. It routes (delegates to goto-project), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to ship-it for the standing ship authorization itself, to goto-project for routing, and to drafty-proof-canvas for visual proof. Do NOT duplicate those skills.",
       "source": "./plugins/dev-flow"
     },
     {
@@ -44,9 +39,9 @@
       "source": "./plugins/dev-up"
     },
     {
-      "name": "exa",
-      "description": "Search the web and scrape page contents using Exa API. Find URLs via neural/keyword search, then extract clean text, highlights, and summaries. Use when the user wants to search the web, find pages, scrape content, extract text, or fetch articles. Triggers on \"search for\", \"find pages about\", \"scrape\", \"extract content\", \"get page text\", \"fetch article\", or \"pull content from URL\".",
-      "source": "./plugins/exa"
+      "name": "drafty-proof-canvas",
+      "description": ">",
+      "source": "./plugins/drafty-proof-canvas"
     },
     {
       "name": "expo-local-build",
@@ -72,11 +67,6 @@
       "name": "instantdb",
       "description": "Build complete, functional React, vanilla JS, or Expo apps with InstantDB as the realtime backend. Use when the user has explicitly chosen InstantDB, asks for a quick realtime/collaborative prototype, or wants a local-first multiplayer app. Triggers on \"instantdb\", \"instant database\", \"instant.db\", \"realtime collab app\", \"multiplayer prototype\", \"local-first app\", \"build app with instant\", or when the user pastes an InstantDB app ID / schema and asks for an app around it.",
       "source": "./plugins/instantdb"
-    },
-    {
-      "name": "ios-device",
-      "description": "Interact with a physically paired iPhone/iPad over the wireless CoreDevice tunnel — stream app console output, gather a sysdiagnose, list processes, copy files in and out of an app sandbox, send Darwin notifications, trigger memory warnings, reboot. Use when the user wants to debug, inspect, or poke at a real iOS device (not a simulator). Triggers on \"device logs\", \"iphone logs\", \"logs from my phone\", \"devicectl\", \"device console\", \"sysdiagnose\", \"real device debug\", \"app crash on device\", \"pull file off iphone\", \"push file to iphone\", \"memory warning\", \"reboot iphone\".",
-      "source": "./plugins/ios-device"
     },
     {
       "name": "johns-public-persona",
@@ -107,11 +97,6 @@
       "name": "notion-page",
       "description": "Read the full content of a Notion page from a URL or page ID. Returns title, metadata, and the page body as markdown. Use when the user pastes a Notion link or asks to read, summarize, or extract content from a Notion page. Triggers on notion.so URLs, \"read this notion page\", \"fetch from notion\", \"what's in this notion doc\".",
       "source": "./plugins/notion-page"
-    },
-    {
-      "name": "proof-canvas",
-      "description": ">",
-      "source": "./plugins/proof-canvas"
     },
     {
       "name": "reddit-miner",
@@ -172,11 +157,6 @@
       "name": "youtube-transcribe",
       "description": "Transcribe YouTube videos. Tries auto/manual captions first via yt-dlp; if they're missing or empty, downloads audio and transcribes with Gemini 2.5 Flash. Use when processing YouTube URLs for content, fact-checking, or research. Triggers on YouTube URLs, \"get transcript\", \"fetch captions\", \"youtube transcript\", or \"transcribe this video\".",
       "source": "./plugins/youtube-transcribe"
-    },
-    {
-      "name": "youtube-video-upload",
-      "description": "Upload a rendered explainer video to YouTube programmatically via the YouTube Data API v3. Uploads the MP4, SRT captions, a Gemini-generated thumbnail, sets privacy + AI-content disclosure, adds to a playlist, and pins a comment linking back to the source article. Triggers on \"upload to YouTube\", \"publish to YouTube\", \"youtube upload\", \"upload mp4 to youtube\", \"set youtube thumbnail\", \"schedule youtube video\", \"youtube data api\", \"add captions to youtube\", or \"publish video\".",
-      "source": "./plugins/youtube-video-upload"
     }
   ]
 }
