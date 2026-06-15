@@ -44,8 +44,11 @@ else
   IPA="$SRC"
 fi
 [[ -f "$IPA" ]] || die "no IPA at $IPA"
+# Absolutize before any `cd` (metadata extraction cd's into $TMP first, which
+# breaks a relative IPA path — exactly what post-build.sh passes via --output).
+IPA="$(cd "$(dirname "$IPA")" && pwd)/$(basename "$IPA")"
 if [[ -z "$LABEL" ]]; then
-  # Default label = the repo the IPA lives in (e.g. journeys.im → journeys-im),
+  # Default label = the repo the IPA lives in (e.g. myapp.com → myapp-com),
   # matching deliver.sh's convention. Fall back to the grandparent dir name.
   repo_root=$(cd "$(dirname "$IPA")" && git rev-parse --show-toplevel 2>/dev/null || true)
   if [[ -n "$repo_root" ]]; then
