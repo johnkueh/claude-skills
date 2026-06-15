@@ -44,7 +44,7 @@ const MARKETPLACE_DESCRIPTION =
   "John Kueh's Claude Code skills. Install the whole collection in one command, or add any single skill on its own.";
 const BUNDLE_NAME = "claude-skills";
 const BUNDLE_DESCRIPTION =
-  "The full collection of John Kueh's Claude Code skills in one install: research (Exa, DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, iOS device, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.";
+  "The full collection of John Kueh's Claude Code skills in one install: research (DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.";
 
 function frontmatterField(md: string, key: string): string {
   const block = md.match(/^---\n([\s\S]*?)\n---/);

@@ -1,5 +1,5 @@
 ---
-name: proof-canvas
+name: drafty-proof-canvas
 description: >
   Publish proof-of-work screenshots to a private drafty canvas so John can eye
   visual results from any device and annotate directly on the images. Use at
@@ -36,7 +36,7 @@ canvas and show proof.")
 ## How
 
 ```sh
-"${CLAUDE_PLUGIN_ROOT}/skills/proof-canvas/scripts/push-proof.sh" \
+"${CLAUDE_PLUGIN_ROOT}/skills/drafty-proof-canvas/scripts/push-proof.sh" \
   --title "Proof: <feature, plain words>" \
   --project <project> \
   --meta "branch <b> · commit <sha> · <where verified> · <date>" \

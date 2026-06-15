@@ -1,6 +1,6 @@
 ---
 name: dev-flow
-description: John's master development workflow — the reasoning layer that takes a request from "go work on X" to landed-and-verified. Use when John says "go work on <project>", names a project plus a task, "fix this bug", "implement this feature", or fires a ship go-word ("ship it", "do it", "let's go") about a code-change plan. It routes (delegates to goto-project), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to ship-it for the standing ship authorization itself, to goto-project for routing, and to proof-canvas for visual proof. Do NOT duplicate those skills.
+description: John's master development workflow — the reasoning layer that takes a request from "go work on X" to landed-and-verified. Use when John says "go work on <project>", names a project plus a task, "fix this bug", "implement this feature", or fires a ship go-word ("ship it", "do it", "let's go") about a code-change plan. It routes (delegates to goto-project), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to ship-it for the standing ship authorization itself, to goto-project for routing, and to drafty-proof-canvas for visual proof. Do NOT duplicate those skills.
 ---
 
 # dev-flow
@@ -80,7 +80,7 @@ Not a bug or feature against a built surface → this flow doesn't apply. Do the
 - **Mobile (RN/Expo)** → **argent** on the iOS simulator / Android emulator — tap through the changed screen via the discovery→tap loop, never from a guess.
 This is the one check that catches "compiles and the suite's green, but the trigger never fires on the real device." Capture the screenshots here — they're the proof.
 
-Then push proof and open the PR: visual work ends with a **proof-canvas** (required by John's standing rules and ship-it) — push the screenshots, put the bare URL in the report, send the PNGs via SendUserFile. `dev-flow pr open` bakes the canvas link and proof refs into the PR body.
+Then push proof and open the PR: visual work ends with a **drafty-proof-canvas** (required by John's standing rules and ship-it) — push the screenshots, put the bare URL in the report, send the PNGs via SendUserFile. `dev-flow pr open` bakes the canvas link and proof refs into the PR body.
 
 **When to merge.** Confident, no regression risk, edge cases covered → `dev-flow pr merge` (this is the deploy trigger). Anything flaky, unverifiable, or half-done → leave the PR open, report exactly what passed and what's uncertain, don't hedge-merge. A non-fast-forward rejection means main moved under you: re-sync the branch onto `origin/main`, re-run the gate on what changed, retry.
 
@@ -104,7 +104,7 @@ Per-worktree isolation of Metro and the dev client is **solved**: `metro-takeove
 
 - **goto-project** — routing (name → repo → cd → CLAUDE.md → fetch+pull). Call it; don't re-derive paths.
 - **ship-it** — the standing ship authorization, its trigger tiers, scope rules, and the content-refresh step. The land decision here uses ship-it's semantics; it does not restate them.
-- **proof-canvas** — pushing visual proof to a drafty canvas. The PR/report references it.
+- **drafty-proof-canvas** — pushing visual proof to a drafty canvas. The PR/report references it.
 - **dev-up** — worktree env seeding, public dev URLs, metro-takeover, expo-qa, the generic worktree GC fallback.
 
 drafty.im is the reference implementation of the contract: bun-locked, `auto-vercel`, gate `web/scripts/ship-check.sh`, smoke `web/scripts/prod-smoke.sh`, prep `web/scripts/worktree-prep.sh`, GC `web/scripts/worktrees-gc.sh`, content in `web/src/content/{changelog.ts,kb/}`.
