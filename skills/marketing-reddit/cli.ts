@@ -348,6 +348,31 @@ function mine(rb: RedditBrowser, sub: string, time: string, nThreads: number, to
 
 // ----------------------------- setup / doctor -----------------------------
 
+// Health-check a CLI by EXECUTING it, not just locating it on PATH.
+// `which` finds a shim even when it can't run — most commonly a stale shebang
+// after a Node/Python upgrade (npm/pipx/uv global installs break exactly this
+// way: which() resolves the shim, exec then fails pointing at the shim itself).
+// Distinguishes the three modes a bare `which` flattens into one PASS:
+//   missing — not on PATH;  broken — found but won't execute;  ok — ran.
+type ProbeResult = { status: "ok" | "missing" | "broken"; path: string; detail: string };
+function probeCommand(cmd: string, args: string[] = ["--version"]): ProbeResult {
+  let cmdPath = "";
+  try { cmdPath = execFileSync("which", [cmd], { encoding: "utf8" }).trim(); } catch {}
+  if (!cmdPath) return { status: "missing", path: "", detail: "not on PATH" };
+  try {
+    execFileSync(cmd, args, { encoding: "utf8", timeout: 15_000, stdio: ["ignore", "pipe", "pipe"] });
+  } catch (e: any) {
+    // ENOENT/EACCES (errno) or shell codes 126/127 = couldn't exec → broken.
+    // Any OTHER nonzero exit means the binary DID run (e.g. unsupported flag) → ok.
+    const errno = e?.code, code = e?.status;
+    if (errno === "ENOENT" || errno === "EACCES" || code === 126 || code === 127) {
+      return { status: "broken", path: cmdPath,
+        detail: `found at ${cmdPath} but won't execute (stale shim? reinstall) — ${String(e?.message || errno).slice(0, 80)}` };
+    }
+  }
+  return { status: "ok", path: cmdPath, detail: cmdPath };
+}
+
 function cmdSetup(proxyArg?: string): number {
   let proxy = proxyArg;
   if (!proxy) proxy = (fs.readFileSync(0, "utf8") || "").trim();
@@ -371,10 +396,12 @@ function cmdDoctor(proxyFlag?: string): number {
     console.log(`  [${status ? "PASS" : "FAIL"}] ${label}${detail ? " — " + detail : ""}`);
   };
   console.log("reddit-miner doctor");
-  let abPath = "";
-  try { abPath = execFileSync("which", ["agent-browser"], { encoding: "utf8" }).trim(); } catch {}
-  line(!!abPath, "agent-browser installed",
-    abPath || "install: npm i -g agent-browser  (then: agent-browser install)");
+  const ab = probeCommand("agent-browser");
+  const abPath = ab.status === "ok" ? ab.path : "";
+  line(ab.status === "ok", "agent-browser installed",
+    ab.status === "broken" ? ab.detail
+      : ab.status === "missing" ? "install: npm i -g agent-browser  (then: agent-browser install)"
+      : ab.path);
   line(typeof Bun !== "undefined", "bun runtime", typeof Bun !== "undefined" ? Bun.version : "install: https://bun.sh");
 
   // browser engine: agent-browser drives Chrome — verify one is actually reachable
