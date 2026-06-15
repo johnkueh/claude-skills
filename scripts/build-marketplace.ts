@@ -44,7 +44,7 @@ const MARKETPLACE_DESCRIPTION =
   "John Kueh's Claude Code skills. Install the whole collection in one command, or add any single skill on its own.";
 const BUNDLE_NAME = "claude-skills";
 const BUNDLE_DESCRIPTION =
-  "The full collection of John Kueh's Claude Code skills in one install: research (DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, daily digest, Cloudflare tunnel), copy & design (brand-copy, brand-design, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.";
+  "The full collection of John Kueh's Claude Code skills in one install, organized by department prefix: dev-* (engineering & ship), marketing-* (SEO/growth research + monitoring), comms-* (Slack, WhatsApp, Notion), media-* (image, video, icons), brand-* (copy + design), data-* (digest), system-* (macOS hygiene), and johns-* (founder voice). Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.";
 
 function frontmatterField(md: string, key: string): string {
   const block = md.match(/^---\n([\s\S]*?)\n---/);
@@ -60,8 +60,8 @@ const SHARED_MODULES: Array<{ canonical: string; targets: string[] }> = [
   {
     canonical: "scripts/shared/dataforseo.py",
     targets: [
-      "skills/keyword-data/dataforseo.py",
-      "skills/serp-data/dataforseo.py",
+      "skills/marketing-keyword-data/dataforseo.py",
+      "skills/marketing-serp/dataforseo.py",
     ],
   },
 ];
