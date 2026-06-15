@@ -1,7 +1,7 @@
 {
   "name": "claude-skills",
-  "version": "1.27.0",
-  "description": "Collection of Claude Code skills, organized by department prefix: dev-* (engineering: dev-flow, dev-up, dev-ship, dev-expo, dev-instantdb, dev-vercel-logs), marketing-* (SEO/growth: keyword/SERP research, AEO + crawler monitoring, reddit/youtube mining, x), comms-* (slack, whatsapp, notion), media-* (image-gen, video-gen, icon-search), brand-* (copy + design house style), data-* (digest), system-* (macOS hygiene), johns-* (founder voice), plus drafty-* (drafty-proof-canvas: visual proof canvases; drafty-design-review: recorded UI walkthrough → feedback canvas).",
+  "version": "1.28.0",
+  "description": "Collection of Claude Code skills, organized by department prefix: dev-* (engineering: dev-flow, dev-up, dev-ship, dev-expo, dev-instantdb, dev-vercel-logs), marketing-* (SEO/growth: keyword/SERP research, AEO + crawler monitoring, reddit/youtube mining, x), comms-* (slack, whatsapp, notion), media-* (image-gen, video-gen, icon-search), brand-* (copy + design house style), data-* (digest), system-* (macOS hygiene), plus drafty-* (drafty-proof-canvas: visual proof canvases; drafty-design-review: recorded UI walkthrough → feedback canvas).",
   "author": {
     "name": "John Kueh",
     "url": "https://github.com/johnkueh"
