@@ -1,6 +1,6 @@
 ---
-name: kole-design-tips
-description: House UI/UX design playbook distilled from Kole Jain's design tutorials. Use whenever designing or reviewing an app/website interface — dashboards, mobile screens, landing pages, settings, modals, empty states, charts, micro-interactions, or pricing pages. Covers typography, color, spacing, dark mode, components, motion, mobile patterns, dashboard structure, presentation, and the "vibe-coded" smell test. Triggers on "design this screen", "review this UI", "make this look professional", "fix this dashboard", "improve this layout", "color palette", "dark mode", "spacing", "rounded corners", "font size", "Figma", "mobile screen", "bottom sheet", "empty state", "micro-interaction", "looks AI-generated", "make this less generic", or "vibe coded".
+name: brand-design
+description: House UI/UX design playbook distilled from Kole Jain's design tutorials. Use whenever designing or reviewing an app/website interface — dashboards, mobile screens, landing pages, settings, modals, empty states, charts, micro-interactions, or pricing pages. Covers typography, color, spacing, dark mode, components, motion, mobile patterns, dashboard structure, presentation, and the "vibe-coded" smell test. Triggers on "design this screen", "review this UI", "make this look professional", "fix this dashboard", "improve this layout", "color palette", "dark mode", "spacing", "rounded corners", "font size", "Figma", "mobile screen", "bottom sheet", "empty state", "micro-interaction", "looks AI-generated", "make this less generic", "vibe coded", or by name — "kole", "kole design", "kole design tips", "design tips", "brand-design", "kole-design-tips".
 ---
 
 # Kole Design Tips
@@ -228,7 +228,7 @@ If the same total-clicks + click-rate header appears on the Dashboard, Links, Cu
 ### Buttons
 - **Padding ratio: horizontal = 2× vertical.** (e.g., `py-4 px-8` / `16px vertical, 32px horizontal`.)
 - **Ghost buttons** (transparent, no background until hover) for secondary actions — sidebar links, low-emphasis controls.
-- **Verb-first** label. See `mailchimp-copy-style` for copy rules.
+- **Verb-first** label. See `brand-copy` for copy rules.
 
 ### Required button states (minimum four, often five)
 | State | Treatment |
@@ -422,7 +422,7 @@ The web has gotten sterile. AI-generated landing pages and "minimalist" template
 - Use blur reveals, fade-and-slide entries, scroll-triggered text animations on hero copy.
 
 ### Finishing touches
-- **Friendly copy** over corporate jargon ("We sweat the details" beats "Our team is meticulously focused on quality"). Defer to `mailchimp-copy-style`.
+- **Friendly copy** over corporate jargon ("We sweat the details" beats "Our team is meticulously focused on quality"). Defer to `brand-copy`.
 - **Custom 404 page** that ties to the brand theme. Examples that work: image-tile "404", a puzzle, a character from your illustration set, an animated metaphor.
 
 ### Inspiration
