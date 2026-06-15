@@ -1,6 +1,6 @@
 ---
-name: mailchimp-copy-style
-description: House copy style guide adapted from Mailchimp. Use whenever writing or reviewing copy for app surfaces (UI strings, buttons, errors, empty states, onboarding, push notifications) and for websites, marketing pages, App Store descriptions, release notes, and emails. Covers voice, tone, grammar, microcopy, accessibility, and inclusive-language rules. Triggers on "house style", "copy style", "write copy", "rewrite this", "review this string", "button text", "error message", "empty state", "onboarding copy", "UI copy", "microcopy", "push notification", "release notes", "App Store copy", "email subject", or "style guide".
+name: brand-copy
+description: House copy style guide adapted from Mailchimp. Use whenever writing or reviewing copy for app surfaces (UI strings, buttons, errors, empty states, onboarding, push notifications) and for websites, marketing pages, App Store descriptions, release notes, and emails. Covers voice, tone, grammar, microcopy, accessibility, and inclusive-language rules. Triggers on "house style", "copy style", "write copy", "rewrite this", "review this string", "button text", "error message", "empty state", "onboarding copy", "UI copy", "microcopy", "push notification", "release notes", "App Store copy", "email subject", "style guide", or by name — "mailchimp", "mailchimp copy", "mailchimp style", "copy style guide", "brand-copy", "mailchimp-copy-style".
 ---
 
 # Mailchimp-Style Copy Guide

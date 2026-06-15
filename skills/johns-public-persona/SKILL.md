@@ -1,6 +1,6 @@
 ---
 name: johns-public-persona
-description: How John presents himself anywhere strangers might read it — the positioning and tone layer for public-facing writing under his name. Use whenever drafting outreach (cold email, DMs, bespoke canvases), articles (johnkueh.com), X / LinkedIn posts, KB / help copy, podcast or conference pitches, bios, or any artifact the public reads as John. This is the *what to claim and how to come across* layer; sentence-level chat voice lives in johns-writing-style, the comedy layer in johns-humour, and product/UI copy in mailchimp-copy-style. Triggers on "write the launch post", "cold outreach", "draft the article", "X post", "LinkedIn post", "bio", "podcast pitch", "make this public-ready", "is this too cocky", "sweep this for flexes", "public voice", "John's persona", or any public-facing draft going out under John's name.
+description: How John presents himself anywhere strangers might read it — the positioning and tone layer for public-facing writing under his name. Use whenever drafting outreach (cold email, DMs, bespoke canvases), articles (johnkueh.com), X / LinkedIn posts, KB / help copy, podcast or conference pitches, bios, or any artifact the public reads as John. This is the *what to claim and how to come across* layer; sentence-level chat voice lives in johns-writing-style, the comedy layer in johns-humour, and product/UI copy in brand-copy. Triggers on "write the launch post", "cold outreach", "draft the article", "X post", "LinkedIn post", "bio", "podcast pitch", "make this public-ready", "is this too cocky", "sweep this for flexes", "public voice", "John's persona", or any public-facing draft going out under John's name.
 ---
 
 # johns-public-persona
@@ -10,7 +10,7 @@ This is how Claude writes John anywhere strangers might read it: outreach (email
 It **complements** the other voice skills rather than replacing them:
 - `johns-writing-style` — chat voice mechanics (iMessage/WhatsApp; short, casual, `tho`/`cuz`, emoji). **Don't let those quirks bleed into public writing** — public copy is full sentences, normal capitalisation.
 - `johns-humour` — the comedy layer (dry, self-directed).
-- `mailchimp-copy-style` — product/UI copy.
+- `brand-copy` — product/UI copy.
 
 This doc is the **positioning and tone** layer those sit under.
 

@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "claude-skills",
-      "description": "The full collection of John Kueh's Claude Code skills in one install: research (DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, daily digest, Cloudflare tunnel), copy & design (mailchimp-copy-style, kole-design-tips, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
+      "description": "The full collection of John Kueh's Claude Code skills in one install: research (DataForSEO keyword/SERP, Reddit, YouTube transcripts), build & ship (Vercel logs, expo-local-build, InstantDB, daily digest, Cloudflare tunnel), copy & design (brand-copy, brand-design, gpt-image-gen-2, icon-search), comms (Notion, Slack, WhatsApp, X), voice (johns-writing-style), and macOS hygiene. Prefer a single skill? Each is also installable on its own — see the per-skill plugins in this marketplace.",
       "source": "./"
     },
     {
@@ -22,6 +22,16 @@
       "name": "ai-crawler-report",
       "description": "Report which AI bots (GPTBot, ClaudeBot, Claude-User, PerplexityBot, Bytespider, CCBot, GoogleOther, and more) are crawling your Vercel-hosted sites, and which paths they hit. Reads Vercel request logs (with user agents) and prints a per-site bot -> hits -> top paths table. Triggers on \"which AI bots crawl\", \"ai crawler report\", \"is GPTBot hitting\", \"is ClaudeBot crawling\", \"AI bot traffic\", \"who's crawling the site\", or \"crawler report for [site]\".",
       "source": "./plugins/ai-crawler-report"
+    },
+    {
+      "name": "brand-copy",
+      "description": "House copy style guide adapted from Mailchimp. Use whenever writing or reviewing copy for app surfaces (UI strings, buttons, errors, empty states, onboarding, push notifications) and for websites, marketing pages, App Store descriptions, release notes, and emails. Covers voice, tone, grammar, microcopy, accessibility, and inclusive-language rules. Triggers on \"house style\", \"copy style\", \"write copy\", \"rewrite this\", \"review this string\", \"button text\", \"error message\", \"empty state\", \"onboarding copy\", \"UI copy\", \"microcopy\", \"push notification\", \"release notes\", \"App Store copy\", \"email subject\", \"style guide\", or by name — \"mailchimp\", \"mailchimp copy\", \"mailchimp style\", \"copy style guide\", \"brand-copy\", \"mailchimp-copy-style\".",
+      "source": "./plugins/brand-copy"
+    },
+    {
+      "name": "brand-design",
+      "description": "House UI/UX design playbook distilled from Kole Jain's design tutorials. Use whenever designing or reviewing an app/website interface — dashboards, mobile screens, landing pages, settings, modals, empty states, charts, micro-interactions, or pricing pages. Covers typography, color, spacing, dark mode, components, motion, mobile patterns, dashboard structure, presentation, and the \"vibe-coded\" smell test. Triggers on \"design this screen\", \"review this UI\", \"make this look professional\", \"fix this dashboard\", \"improve this layout\", \"color palette\", \"dark mode\", \"spacing\", \"rounded corners\", \"font size\", \"Figma\", \"mobile screen\", \"bottom sheet\", \"empty state\", \"micro-interaction\", \"looks AI-generated\", \"make this less generic\", \"vibe coded\", or by name — \"kole\", \"kole design\", \"kole design tips\", \"design tips\", \"brand-design\", \"kole-design-tips\".",
+      "source": "./plugins/brand-design"
     },
     {
       "name": "daily-digest",
@@ -70,7 +80,7 @@
     },
     {
       "name": "johns-public-persona",
-      "description": "How John presents himself anywhere strangers might read it — the positioning and tone layer for public-facing writing under his name. Use whenever drafting outreach (cold email, DMs, bespoke canvases), articles (johnkueh.com), X / LinkedIn posts, KB / help copy, podcast or conference pitches, bios, or any artifact the public reads as John. This is the *what to claim and how to come across* layer; sentence-level chat voice lives in johns-writing-style, the comedy layer in johns-humour, and product/UI copy in mailchimp-copy-style. Triggers on \"write the launch post\", \"cold outreach\", \"draft the article\", \"X post\", \"LinkedIn post\", \"bio\", \"podcast pitch\", \"make this public-ready\", \"is this too cocky\", \"sweep this for flexes\", \"public voice\", \"John's persona\", or any public-facing draft going out under John's name.",
+      "description": "How John presents himself anywhere strangers might read it — the positioning and tone layer for public-facing writing under his name. Use whenever drafting outreach (cold email, DMs, bespoke canvases), articles (johnkueh.com), X / LinkedIn posts, KB / help copy, podcast or conference pitches, bios, or any artifact the public reads as John. This is the *what to claim and how to come across* layer; sentence-level chat voice lives in johns-writing-style, the comedy layer in johns-humour, and product/UI copy in brand-copy. Triggers on \"write the launch post\", \"cold outreach\", \"draft the article\", \"X post\", \"LinkedIn post\", \"bio\", \"podcast pitch\", \"make this public-ready\", \"is this too cocky\", \"sweep this for flexes\", \"public voice\", \"John's persona\", or any public-facing draft going out under John's name.",
       "source": "./plugins/johns-public-persona"
     },
     {
@@ -82,16 +92,6 @@
       "name": "keyword-data",
       "description": "DataForSEO keyword research for SEO and content planning. Get search volume, search intent, keyword difficulty, CPC, and keyword suggestions. Use for keyword research, content planning, and SEO strategy. Supports --dry-run to preview costs before executing. Triggers on \"keyword research\", \"search volume\", \"keyword difficulty\", \"CPC for\", \"keyword ideas for\", \"keyword suggestions\", \"long-tail keywords\", \"what do people search for\", \"search intent for\", or \"SEO opportunity for [topic]\".",
       "source": "./plugins/keyword-data"
-    },
-    {
-      "name": "kole-design-tips",
-      "description": "House UI/UX design playbook distilled from Kole Jain's design tutorials. Use whenever designing or reviewing an app/website interface — dashboards, mobile screens, landing pages, settings, modals, empty states, charts, micro-interactions, or pricing pages. Covers typography, color, spacing, dark mode, components, motion, mobile patterns, dashboard structure, presentation, and the \"vibe-coded\" smell test. Triggers on \"design this screen\", \"review this UI\", \"make this look professional\", \"fix this dashboard\", \"improve this layout\", \"color palette\", \"dark mode\", \"spacing\", \"rounded corners\", \"font size\", \"Figma\", \"mobile screen\", \"bottom sheet\", \"empty state\", \"micro-interaction\", \"looks AI-generated\", \"make this less generic\", or \"vibe coded\".",
-      "source": "./plugins/kole-design-tips"
-    },
-    {
-      "name": "mailchimp-copy-style",
-      "description": "House copy style guide adapted from Mailchimp. Use whenever writing or reviewing copy for app surfaces (UI strings, buttons, errors, empty states, onboarding, push notifications) and for websites, marketing pages, App Store descriptions, release notes, and emails. Covers voice, tone, grammar, microcopy, accessibility, and inclusive-language rules. Triggers on \"house style\", \"copy style\", \"write copy\", \"rewrite this\", \"review this string\", \"button text\", \"error message\", \"empty state\", \"onboarding copy\", \"UI copy\", \"microcopy\", \"push notification\", \"release notes\", \"App Store copy\", \"email subject\", or \"style guide\".",
-      "source": "./plugins/mailchimp-copy-style"
     },
     {
       "name": "notion-page",
