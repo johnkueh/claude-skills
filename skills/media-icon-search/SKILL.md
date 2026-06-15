@@ -59,7 +59,7 @@ works right after install. `build` regenerates it and the heavier **render data*
 <cli> search "something vegetarian"
 
 # Scope to a project's installed sets (correct imports, no unimportable icons)
-<cli> search "delete a recipe" --project ~/Projects/myapp
+<cli> search "delete an item" --project ~/Projects/myapp
 
 # One library only:
 <cli> search "calendar" --set lucide --fuzzy
