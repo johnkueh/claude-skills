@@ -65,8 +65,7 @@ canvas and show proof.")
 - The script pushes `--private` (owner-only) and prints the URL.
 - `--project` is required and the script always tags `proof` — proof canvases
   used to land unfiled/untagged, which is what the 2026-06-12 canvas audit
-  spent most of its time cleaning up. Use the repo name (drafty, clove,
-  recipes, johnkueh.com, …).
+  spent most of its time cleaning up. Use the repo/project name the proof belongs to (e.g. drafty, your-app).
 
 ## Report
 

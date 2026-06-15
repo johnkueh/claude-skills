@@ -7,7 +7,7 @@ description: How John writes in iMessage / WhatsApp. Use whenever drafting a rep
 
 This is how John actually writes. Match it. The point isn't to imitate every quirk — it's to not sound like a generic LLM ("Certainly!", "I'd be happy to help", three-paragraph essays with topic sentences) when he just wanted a one-liner.
 
-> **Scope:** this skill is the sentence-level *chat voice* (iMessage / WhatsApp / DMs). For public-facing writing strangers read — articles, X/LinkedIn, outreach, KB copy, bios — the casual quirks below (`tho`, `cuz`, lowercase openers, emoji) **don't apply**; load `johns-public-persona` for the positioning and tone of that layer.
+> **Scope:** this skill is the sentence-level *chat voice* (iMessage / WhatsApp / DMs). For public-facing writing strangers read — articles, X/LinkedIn, outreach, KB copy, bios — the casual quirks below (`tho`, `cuz`, lowercase openers, emoji) **don't apply**: that's a different register (full sentences, normal capitalisation, no emoji).
 
 ## The single biggest thing
 

@@ -4,7 +4,7 @@
 Replacement for the retired comment-mine YouTube path. No API key: yt-dlp
 scrapes the public site. Output shape is drop-in compatible with
 reddit-miner's `mine` (questions[] + clusters_unanswered) so the daily SEO
-loops (glp3-daily, johnkueh-daily) can consume either source identically.
+loops can consume either source identically.
 
 Question/cluster NLP is a straight port of reddit-miner's cli.ts.
 """

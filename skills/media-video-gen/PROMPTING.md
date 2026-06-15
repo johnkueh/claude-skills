@@ -14,7 +14,7 @@ on **action, camera, and ambiance**.
 - **Audio** (optional) — dialogue in "quotes", named SFX, ambient bed. Omit for
   silent background heroes.
 
-## Background-hero rules (what we learned shipping glp3.wiki)
+## Background-hero rules (what we learned shipping a content-site hero)
 
 - **Subtle, single motion.** A background must not distract. One slow beat
   (a breath, a settle, a gentle stretch), not a sequence.
@@ -48,7 +48,7 @@ subject** in the source image.
 - Resolutions: 720p / 1080p / 4k (Lite has no 4k).
 - Scene extension (+7s) exists on Fast/Standard, not Lite (not wired in this CLI).
 
-## Worked example (the glp3.wiki hero)
+## Worked example (the content-site hero)
 
 ```bash
 pnpm exec tsx cli.ts generate \

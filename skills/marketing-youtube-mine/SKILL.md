@@ -4,7 +4,7 @@ description: >-
   Mine YouTube comments for unanswered questions via yt-dlp — search videos by
   query or channel, pull top comments, extract question-shaped comments with
   reply-based answered detection, and cluster the unanswered ones. Output is
-  drop-in compatible with marketing-reddit's mine command, so the glp3-daily and
+  drop-in compatible with marketing-reddit's mine command, so downstream daily SEO
   johnkueh-daily SEO loops consume either source identically. No API key
   (yt-dlp scrapes the public site). Replaces the retired comment-mine YouTube
   path. Triggers on "mine youtube", "youtube comments for", "what are people

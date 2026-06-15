@@ -125,7 +125,7 @@ IS_BASELINE=0
 # ---- fingerprint bin ---------------------------------------------------------
 # Each tree MUST be fingerprinted by its own bin: with pnpm, a bin from another
 # checkout resolves sources through its own symlinked node_modules and the hash
-# comes out different for an identical tree (verified on journeys.im).
+# comes out different for an identical tree (verified in practice).
 
 find_fp_bin() {  # $1 = app dir
   local tree_root

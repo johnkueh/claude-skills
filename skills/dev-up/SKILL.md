@@ -232,7 +232,7 @@ works on cellular. ~1–2 min latency, no HMR: review path, not dev loop. The
 `wt/` prefix is enforced and the default branch refused, so a publish can
 never reach a release channel (channels map to branches explicitly; nothing
 maps to `wt/*`). Where a project's OTA releases need separate authorization
-(e.g. myapp), that covers channel-mapped branches — still surface `wt/*`
+(e.g. an Expo app), that covers channel-mapped branches — still surface `wt/*`
 publishes in your report.
 
 | Variable | Default source | Override |
@@ -244,7 +244,7 @@ publishes in your report.
 | Message | last commit subject | `--message` |
 | EAS environment | `development` (eas-cli requires one non-interactively) | `EQ_EAS_ENV` / `--environment` |
 
-pnpm gotcha (verified on journeys.im): each tree is fingerprinted with **its
+pnpm gotcha (verified in practice): each tree is fingerprinted with **its
 own** `node_modules/.bin/fingerprint` — a bin borrowed from another checkout
 hashes an identical tree differently. Handled; version skew between trees
 produces a warning (mismatch may be algorithm drift). Both trees need deps

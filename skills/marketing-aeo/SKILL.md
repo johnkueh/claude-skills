@@ -61,8 +61,8 @@ When the user first asks to set this up for a project:
 
 6. **Add domains to detect.** The user's own domain + close competitors:
    ```
-   aeo domain add glp3.wiki --label own
-   aeo domain add www.glp3.wiki --label own
+   aeo domain add example.com --label own
+   aeo domain add www.example.com --label own
    aeo domain add competitor.com --label competitor
    ```
 

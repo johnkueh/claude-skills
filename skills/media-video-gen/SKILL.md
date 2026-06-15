@@ -130,7 +130,7 @@ superpower.com. No loop seam to engineer. Wire it as:
 
 End the generated clip on a good resting frame; set `poster` to the first frame.
 
-## Gotchas (learned shipping the glp3.wiki hero)
+## Gotchas (learned shipping the content-site hero)
 
 - **RAI filter is the main cost sink.** Shirtless/physique subjects get rejected;
   neutralize the wording, keep `allow_adult`, prefer **Fast over Lite** for any

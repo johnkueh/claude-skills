@@ -50,13 +50,8 @@
     },
     {
       "name": "dev-flow",
-      "description": "John's master development workflow — the reasoning layer that takes a request from \"go work on X\" to landed-and-verified. Use when John says \"go work on <project>\", names a project plus a task, \"fix this bug\", \"implement this feature\", or fires a ship go-word (\"ship it\", \"do it\", \"let's go\") about a code-change plan. It routes (delegates to dev-goto), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to dev-ship for the standing ship authorization itself, to dev-goto for routing, and to drafty-proof-canvas for visual proof. Do NOT duplicate those skills.",
+      "description": "John's master development workflow — the reasoning layer that takes a request from \"go work on X\" to landed-and-verified. Use when John says \"go work on <project>\", names a project plus a task, \"fix this bug\", \"implement this feature\", or fires a ship go-word (\"ship it\", \"do it\", \"let's go\") about a code-change plan. It routes (resolving the project name to its repo), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to dev-ship for the standing ship authorization itself, and to drafty-proof-canvas for visual proof. Do NOT duplicate those skills.",
       "source": "./plugins/dev-flow"
-    },
-    {
-      "name": "dev-goto",
-      "description": "Resolve a short project name to its repo under ~/Projects, cd in, and load that repo's context before doing the actual task. Use whenever John starts a request with \"go into X\", \"in X, ...\", \"switch to X\", \"open X\", \"over in X\", or just names a project as the place to work — e.g. drafty, drafty.im, marky, johnkueh.com, glp3, journeys, recipes, clove, subs.rip, claude-skills, bq-analytics. Sessions start at ~/Projects, so the target repo's CLAUDE.md is NOT auto-loaded — this skill is how it gets loaded.",
-      "source": "./plugins/dev-goto"
     },
     {
       "name": "dev-instantdb",
@@ -87,11 +82,6 @@
       "name": "drafty-proof-canvas",
       "description": ">",
       "source": "./plugins/drafty-proof-canvas"
-    },
-    {
-      "name": "johns-public-persona",
-      "description": "How John presents himself anywhere strangers might read it — the positioning and tone layer for public-facing writing under his name. Use whenever drafting outreach (cold email, DMs, bespoke canvases), articles (johnkueh.com), X / LinkedIn posts, KB / help copy, podcast or conference pitches, bios, or any artifact the public reads as John. This is the *what to claim and how to come across* layer; sentence-level chat voice lives in johns-writing-style, the comedy layer in johns-humour, and product/UI copy in brand-copy. Triggers on \"write the launch post\", \"cold outreach\", \"draft the article\", \"X post\", \"LinkedIn post\", \"bio\", \"podcast pitch\", \"make this public-ready\", \"is this too cocky\", \"sweep this for flexes\", \"public voice\", \"John's persona\", or any public-facing draft going out under John's name.",
-      "source": "./plugins/johns-public-persona"
     },
     {
       "name": "johns-writing-style",

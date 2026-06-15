@@ -27,7 +27,7 @@ bash $SKILL/publish-build.sh ~/Projects/myapp/app/build-output
 
 Flags: `--slot dev-ios` (default; any `<profile>-<platform>` filename in
 build-output), `--label NAME` (default: the repo's root dir name, dots→hyphens,
-e.g. `journeys.im` → `journeys-im`).
+e.g. `myapp.com` → `myapp-com`).
 
 What it does: extracts bundle id / version / embedded runtime fingerprint from
 the IPA → uploads IPA + generated `manifest.plist` to Blob under

@@ -29,7 +29,7 @@ const SCHEMA = {
         type: "object",
         properties: {
           url: { type: "string" },
-          domain: { type: "string", description: "Bare domain, e.g. 'glp3.wiki' — strip www. and protocol." },
+          domain: { type: "string", description: "Bare domain, e.g. 'example.com' — strip www. and protocol." },
           anchor_text: { type: "string", description: "Text near the citation (link title or first ~60 chars of the cited claim)." },
           position: { type: "integer", description: "1-indexed order of citation in the response." },
         },

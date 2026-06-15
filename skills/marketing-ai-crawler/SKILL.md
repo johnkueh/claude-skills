@@ -20,7 +20,7 @@ the repo).
 
 ```bash
 cd <skill-dir>
-python3 cli.py setup --team <team-slug> --projects glp3wiki=glp3.wiki,drafty=drafty.im,johnkueh-com=johnkueh.com
+python3 cli.py setup --team <team-slug> --projects drafty=drafty.im,myapp=myapp.com
 python3 cli.py doctor   # token + config + live request-log ping per site
 ```
 
@@ -35,13 +35,13 @@ cd <skill-dir>
 python3 cli.py report
 
 # Narrower window, one site, JSON output
-python3 cli.py report --since 6h --site glp3.wiki --json
+python3 cli.py report --since 6h --site myapp.com --json
 ```
 
 Output per site:
 
 ```
-glp3.wiki  (4,213 requests scanned)
+myapp.com  (4,213 requests scanned)
 ──────────────────────────────────────────────
   Bot                      Hits  Top paths
   GPTBot                    142  /retatrutide-dosage (38), / (22), ...

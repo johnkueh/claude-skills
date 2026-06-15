@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "$TITLE" && $# -ge 2 ]] || { echo "usage: push-proof.sh --title T --project P [--meta M] [--story F] [--slug S] img caption [img caption ...]" >&2; exit 1; }
-[[ -n "$PROJECT" ]] || { echo "--project is required (the repo/project this proof belongs to, e.g. drafty, clove)" >&2; exit 1; }
+[[ -n "$PROJECT" ]] || { echo "--project is required (the repo/project this proof belongs to, e.g. drafty, your-app)" >&2; exit 1; }
 [[ $(( $# % 2 )) -eq 0 ]] || { echo "images and captions must come in pairs" >&2; exit 1; }
 
 OUT="$(mktemp -d)/proof.html"

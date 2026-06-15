@@ -1,6 +1,6 @@
 ---
 name: dev-flow
-description: John's master development workflow — the reasoning layer that takes a request from "go work on X" to landed-and-verified. Use when John says "go work on <project>", names a project plus a task, "fix this bug", "implement this feature", or fires a ship go-word ("ship it", "do it", "let's go") about a code-change plan. It routes (delegates to dev-goto), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to dev-ship for the standing ship authorization itself, to dev-goto for routing, and to drafty-proof-canvas for visual proof. Do NOT duplicate those skills.
+description: John's master development workflow — the reasoning layer that takes a request from "go work on X" to landed-and-verified. Use when John says "go work on <project>", names a project plus a task, "fix this bug", "implement this feature", or fires a ship go-word ("ship it", "do it", "let's go") about a code-change plan. It routes (resolving the project name to its repo), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to dev-ship for the standing ship authorization itself, and to drafty-proof-canvas for visual proof. Do NOT duplicate those skills.
 ---
 
 # dev-flow
@@ -28,7 +28,7 @@ Run `dev-flow doctor` early when a repo is new to you — a missing or stale man
 
 ```
 prompt
-  -> dev-goto        (route name -> repo -> cd -> read CLAUDE.md -> fetch+pull main)
+  -> route           (name -> repo -> cd -> read CLAUDE.md -> fetch+pull main)
   -> CLASSIFY            {bug | feature | other}
   -> the path for that class
   -> land decision       (PR -> merge, gated on confidence)
@@ -37,7 +37,7 @@ prompt
 
 ### Route
 
-Delegate to **dev-goto** — do not reimplement routing. It resolves the name, cds in, loads the repo CLAUDE.md (env gotchas, harness, deploy behavior), and reports the parked branch + WIP. Take what it tells you as ground: John often parks the main checkout on a WIP branch, which is exactly why work happens in a worktree, never in that checkout.
+**Resolve the short project name to its repo** — find its path (e.g. under `~/Projects`), cd in, load the repo CLAUDE.md (env gotchas, harness, deploy behavior), and note the parked branch + WIP. Take that as ground: the main checkout is often parked on a WIP branch, which is exactly why work happens in a worktree, never in that checkout.
 
 ### Classify
 
@@ -69,7 +69,7 @@ When ambiguous, lead with your read and one line of why, then proceed — don't 
 
 ## The other path
 
-Not a bug or feature against a built surface → this flow doesn't apply. Do the thing directly. Release flows that own their authorization (OTA, EAS, plugin/CLI version bumps, clove `/release`) are explicitly out of scope — route to their skills.
+Not a bug or feature against a built surface → this flow doesn't apply. Do the thing directly. Release flows that own their authorization (OTA, EAS, plugin/CLI version bumps, a monorepo's `/release`) are explicitly out of scope — route to their skills.
 
 ## Decision gates
 
@@ -102,7 +102,7 @@ Per-worktree isolation of Metro and the dev client is **solved**: `metro-takeove
 
 ## What this skill defers, never duplicates
 
-- **dev-goto** — routing (name → repo → cd → CLAUDE.md → fetch+pull). Call it; don't re-derive paths.
+- **Routing** — resolve name → repo → cd → CLAUDE.md → fetch+pull. Don't re-derive paths.
 - **dev-ship** — the standing ship authorization, its trigger tiers, scope rules, and the content-refresh step. The land decision here uses dev-ship's semantics; it does not restate them.
 - **drafty-proof-canvas** — pushing visual proof to a drafty canvas. The PR/report references it.
 - **dev-up** — worktree env seeding, public dev URLs, metro-takeover, expo-qa, the generic worktree GC fallback.
