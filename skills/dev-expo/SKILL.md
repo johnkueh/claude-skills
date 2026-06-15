@@ -137,59 +137,6 @@ build-output/
 
 Register the device once: `eas device:create`. After that, every `development` build picks up the device automatically; `preview` / `production` ad-hoc builds need a rebuild after adding new devices.
 
-## Adding EAS Update (OTA) to a project
-
-Once a project ships, JS-only changes can reach installed binaries over the air
-instead of a rebuild. Four pieces, plus the canonical preflight this skill ships.
-
-### 1. `app.config.ts` / `app.json` — make it OTA-capable
-
-`expo-updates` installed, `updates.url` set, and
-`runtimeVersion: { policy: "fingerprint" }`. **Never** switch the policy off to
-"fix" an OTA — the fingerprint match is the safety net (JS that calls a missing
-native module can't reach a binary without it). When an OTA "isn't applying,"
-the fix is a fresh build, not a policy change.
-
-### 2. `app/fingerprint.config.js` — pin out cosmetic churn
-
-```js
-// Keep the runtime hash tied to REAL native changes, so a squash merge, version
-// bump, or npm-script edit can't drift it (and silently strand every OTA).
-const { SourceSkips } = require('@expo/fingerprint');
-module.exports = { sourceSkips: SourceSkips.GitIgnore | SourceSkips.PackageJsonScriptsAll };
-```
-
-Commit it — EAS build and `eas update` then compute the same hash in lockstep.
-
-### 3. `app/scripts/ota-preflight.mjs` — copy this skill's template verbatim
-
-```sh
-SKILL=~/.claude/plugins/marketplaces/johnkueh-skills/skills/dev-expo/scripts
-cp "$SKILL/ota-preflight.mjs" app/scripts/ota-preflight.mjs
-```
-
-It computes the local fingerprint per platform and aborts a publish when it has
-drifted from the binaries already deployed on the channel. **Do not rewrite the
-remote lookup to `--limit 1`** — `eas update:list` returns per-platform groups
-interleaved newest-first, so comparing the most-recent group to a local iOS
-fingerprint false-aborts when that group is Android. The template already filters
-by platform; the full explanation is in its header. (This is the recurring trip —
-every project that hand-rolled its own preflight before this template carried the
-bug.)
-
-### 4. `app/package.json` — one `update:*` script per channel
-
-```jsonc
-"ota-preflight":  "node scripts/ota-preflight.mjs",
-"update:prod":    "tsc --noEmit && node scripts/ota-preflight.mjs --channel production && eas update --branch production --environment production --auto",
-"update:preview": "tsc --noEmit && node scripts/ota-preflight.mjs --channel preview && eas update --branch preview --environment preview --auto"
-```
-
-`--environment` is **required** in `--non-interactive` mode. `--auto` sets each
-platform's `runtimeVersion` from its own fingerprint and the message from the
-last commit. OTA releases are typically a separate authorization from a merge —
-gate each one.
-
 ## What this skill is NOT for
 
 - **Shipping a real release.** App Store `.ipa` and Play `.aab` can't be sideloaded — they reject. Use the project's own `pnpm release` dispatcher.
