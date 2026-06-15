@@ -77,8 +77,12 @@ canvas and show proof.")
 
 ## Notes
 
-- Images ride inline as data URIs — no asset hosting. Keep each PNG under
-  ~500KB (screenshot at 1x, crop dead space) and the canvas under ~5MB.
+- Images ride inline as data URIs — self-contained, no upload step, which is
+  the right call for a proof canvas's handful of small shots. Keep each PNG
+  under ~500KB (screenshot at 1x, crop dead space) and the canvas under ~5MB.
+  For *many* or large images, prefer local `<img src="./shot.png">` refs
+  instead: `drafty canvas push` auto-uploads them to the CDN (see
+  drafty-design-review) — no data-URI bloat, no ~5MB ceiling.
 - Don't reuse one mega proof canvas across features — one canvas per feature
   (or per ship), `--slug` only for iterations of the same proof.
 - Proof canvases are disposable; archive/rm old ones freely.

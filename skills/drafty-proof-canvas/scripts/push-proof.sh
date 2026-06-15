@@ -8,8 +8,10 @@
 #                 [--story story.md] [--slug existing-slug] \
 #                 img1.png "caption 1" [img2.png "caption 2" ...]
 #
-# - Images are embedded as data URIs (no asset hosting needed). Keep each
-#   screenshot under ~500KB; total canvas under ~5MB.
+# - Images are embedded as data URIs — self-contained, no upload step. Good for
+#   a proof canvas's few small shots; keep each under ~500KB, the canvas under
+#   ~5MB. (For many/large images, local <img src> refs auto-upload to the CDN on
+#   push — see the drafty-design-review skill — avoiding data-URI bloat.)
 # - --story: a file of HTML/plain paragraphs inserted between the meta line
 #   and the figures (the narrative: what changed, what to look at, bugs found).
 # - --slug: re-push onto an existing proof canvas (iteration → version history)
