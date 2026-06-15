@@ -219,7 +219,7 @@ the baseline — it lists new updates but greys out Open (fingerprint runtime)
 or loads them against wrong natives (pinned). `record` pins the fingerprint of
 the tree a dev client was just built from to `~/.expo-qa/<app>-<platform>.json`;
 project `local-build.sh` wrappers call it automatically after successful dev
-builds (template in the expo-local-build skill). With a record, `gate` adds a
+builds (template in the dev-expo skill). With a record, `gate` adds a
 third verdict — **CLIENT STALE, exit 3** — and `publish` refuses with "rebuild
 the dev client first" (`--skip-gate` if you'll load on a fresher device).
 

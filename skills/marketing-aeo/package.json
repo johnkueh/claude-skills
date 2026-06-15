@@ -1,0 +1,26 @@
+{
+  "name": "aeo-monitor",
+  "version": "0.1.0",
+  "description": "Track AI chatbot citations (ChatGPT, Perplexity, Google AI Overview, Claude) for any project",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "aeo": "./aeo"
+  },
+  "scripts": {
+    "aeo": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "@google/genai": "^1.0.0",
+    "better-sqlite3": "^12.0.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.7.5",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}
