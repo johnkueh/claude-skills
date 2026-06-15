@@ -74,11 +74,6 @@
       "source": "./plugins/dev-vercel-logs"
     },
     {
-      "name": "drafty-design-review",
-      "description": ">",
-      "source": "./plugins/drafty-design-review"
-    },
-    {
       "name": "drafty-proof-canvas",
       "description": ">",
       "source": "./plugins/drafty-proof-canvas"

@@ -64,12 +64,6 @@ const SHARED_MODULES: Array<{ canonical: string; targets: string[] }> = [
       "skills/marketing-serp/dataforseo.py",
     ],
   },
-  {
-    canonical: "scripts/shared/drafty_theme.py",
-    targets: [
-      "skills/drafty-design-review/scripts/drafty_theme.py",
-    ],
-  },
 ];
 
 for (const { canonical, targets } of SHARED_MODULES) {
