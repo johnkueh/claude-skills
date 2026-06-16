@@ -47,3 +47,31 @@ anything personal, private, or secret.
    edit alone leaves it in history (and a leaked secret needs rotating).
 
 If you spot a leak that's already committed, **stop and tell John** — don't quietly patch it.
+
+## Skill naming — use a department prefix
+
+Name every skill `<dept>-<thing>`, where `<dept>` is an **established department**,
+chosen by what the skill *does* (its domain) — **not** the tool it happens to use.
+
+Established departments:
+
+- `brand-` — brand voice, copy, visual design
+- `comms-` — messaging surfaces (Slack, WhatsApp, Notion)
+- `data-` — data digests / reporting
+- `dev-` — building, shipping, running code (Expo, Vercel, Instant, ship, up, logs)
+- `drafty-` — the drafty.im product integration
+- `marketing-` — growth, SEO, content, social, and their data sources
+- `media-` — asset generation (images, video, icons)
+- `system-` — local machine maintenance
+
+Rules:
+
+1. **Pick the dept by domain, not implementation.** An X-reading transport is
+   `marketing-x-client` (it sits next to `marketing-x`) — not `x-client`.
+2. **Thin single-tool wrappers** may take the external tool's bare name (e.g. an
+   `exa` search wrapper) — but prefer a dept prefix whenever a domain fits.
+3. If a skill genuinely needs a **new** department, that's fine — make it a real
+   category others could join, not a one-off bucket.
+4. **Renaming a mis-named skill** (e.g. `x-client` → `marketing-x-client`): rename
+   the `skills/<name>/` dir, update the SKILL.md frontmatter `name:`, then rerun
+   `bun scripts/build-marketplace.ts` and bump the plugin version.
