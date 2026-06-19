@@ -510,5 +510,193 @@ def costs():
     click.echo(f"  --dry-run                : Preview cost before running")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DataForSEO Labs — competitor reverse-engineering
+# Discover what a *competitor domain* actually ranks for, instead of guessing
+# seed keywords. All take --location (default 2036 = Australia; 2840 = US).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _labs_first_result(resp: dict) -> dict:
+    task = (resp.get("tasks") or [{}])[0]
+    return (task.get("result") or [{}])[0] or {}
+
+
+def _labs_print(rows: list, cols: list, limit: int) -> None:
+    for row in rows[:limit]:
+        click.echo("  " + "  ".join(str(row.get(c, "")) for c in cols))
+
+
+@cli.command("ranked-keywords")
+@click.argument("domain")
+@click.option("--location", default="2036", help="Location code (default: 2036 = Australia)")
+@click.option("--language", default="en", help="Language code (default: en)")
+@click.option("--limit", default=200, help="Max keywords to return (default: 200)")
+@click.option("--max-pos", default=20, help="Only keywords ranking in top N positions (default: 20)")
+@click.option("--min-vol", default=0, help="Minimum search volume (default: 0)")
+@click.option("--output", "-o", help="Output CSV file path")
+def ranked_keywords(domain, location, language, limit, max_pos, min_vol, output):
+    """Every keyword a DOMAIN ranks for (position + volume + cpc). ~$0.02-0.05."""
+    payload = [{
+        "target": domain, "language_code": language, "location_code": int(location),
+        "limit": limit, "order_by": ["keyword_data.keyword_info.search_volume,desc"],
+        "filters": [
+            ["ranked_serp_element.serp_item.rank_absolute", "<=", max_pos],
+            "and", ["keyword_data.keyword_info.search_volume", ">=", min_vol],
+        ],
+    }]
+    click.echo(f"🔍 Pulling keywords {domain} ranks for (top-{max_pos})...")
+    resp = api_post("dataforseo_labs/google/ranked_keywords/live", payload)
+    res = _labs_first_result(resp)
+    rows = []
+    for it in res.get("items") or []:
+        kd = it.get("keyword_data", {})
+        ki = kd.get("keyword_info", {}) or {}
+        se = (it.get("ranked_serp_element") or {}).get("serp_item", {}) or {}
+        rows.append({
+            "keyword": kd.get("keyword"),
+            "search_volume": ki.get("search_volume") or 0,
+            "cpc": round(ki.get("cpc") or 0, 2),
+            "position": se.get("rank_absolute"),
+            "etv": round(se.get("etv") or 0, 1),
+            "url": se.get("url"),
+        })
+    rows.sort(key=lambda x: -x["search_volume"])
+    if output and rows:
+        with open(output, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+        path = output
+    else:
+        path = auto_save(rows, "ranked", domain)
+    click.echo(f"💾 Saved to {path}")
+    click.echo(f"\n{domain}: {res.get('total_count')} ranked keywords (top-{max_pos}), "
+               f"showing {len(rows)} | 💰 ${resp.get('cost')}")
+    _labs_print(rows, ["search_volume", "cpc", "position", "keyword"], min(40, len(rows)))
+
+
+@cli.command("domain-overview")
+@click.argument("domains", nargs=-1, required=True)
+@click.option("--location", default="2036", help="Location code (default: 2036 = Australia)")
+@click.option("--language", default="en", help="Language code (default: en)")
+def domain_overview(domains, location, language):
+    """Organic footprint per domain: kw count, est traffic/mo, $ value. ~$0.01/domain."""
+    for d in domains:
+        resp = api_post("dataforseo_labs/google/domain_rank_overview/live",
+                        [{"target": d, "language_code": language, "location_code": int(location)}])
+        items = _labs_first_result(resp).get("items") or []
+        if not items:
+            click.echo(f"  {d}: no data"); continue
+        m = items[0].get("metrics", {}).get("organic", {})
+        click.echo(f"  {d:<22} kws:{m.get('count', 0):>7} | est traffic/mo:{m.get('etv', 0):>11,.0f} | "
+                   f"traffic value: ${m.get('estimated_paid_traffic_cost', 0):>11,.0f}")
+
+
+@cli.command("intersection")
+@click.argument("domain_a")
+@click.argument("domain_b")
+@click.option("--location", default="2036", help="Location code (default: 2036 = Australia)")
+@click.option("--language", default="en", help="Language code (default: en)")
+@click.option("--limit", default=100, help="Max keywords (default: 100)")
+@click.option("--min-vol", default=40, help="Minimum search volume (default: 40)")
+@click.option("--output", "-o", help="Output CSV file path")
+def intersection(domain_a, domain_b, location, language, limit, min_vol, output):
+    """Keywords BOTH domains rank for — gap analysis. ~$0.02."""
+    payload = [{
+        "target1": domain_a, "target2": domain_b, "language_code": language,
+        "location_code": int(location), "intersections": True, "limit": limit,
+        "order_by": ["keyword_data.keyword_info.search_volume,desc"],
+        "filters": [["keyword_data.keyword_info.search_volume", ">", min_vol]],
+    }]
+    click.echo(f"🔍 Keywords both {domain_a} and {domain_b} rank for...")
+    resp = api_post("dataforseo_labs/google/domain_intersection/live", payload)
+    res = _labs_first_result(resp)
+    rows = []
+    for it in res.get("items") or []:
+        kd = it.get("keyword_data", {})
+        ki = kd.get("keyword_info", {}) or {}
+        rows.append({
+            "keyword": kd.get("keyword"),
+            "search_volume": ki.get("search_volume") or 0,
+            "cpc": round(ki.get("cpc") or 0, 2),
+            "pos_a": (it.get("first_domain_serp_element") or {}).get("rank_absolute"),
+            "pos_b": (it.get("second_domain_serp_element") or {}).get("rank_absolute"),
+        })
+    rows.sort(key=lambda x: -x["search_volume"])
+    if output and rows:
+        with open(output, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+        path = output
+    else:
+        path = auto_save(rows, "intersection", f"{domain_a}-{domain_b}")
+    click.echo(f"💾 Saved to {path}")
+    click.echo(f"\n{domain_a} ∩ {domain_b}: {res.get('total_count')} shared keywords | 💰 ${resp.get('cost')}")
+    _labs_print(rows, ["search_volume", "cpc", "keyword"], min(40, len(rows)))
+
+
+@cli.command("competitors")
+@click.argument("domain")
+@click.option("--location", default="2036", help="Location code (default: 2036 = Australia)")
+@click.option("--language", default="en", help="Language code (default: en)")
+@click.option("--limit", default=25, help="Max competitor domains (default: 25)")
+@click.option("--min-intersections", default=10, help="Min shared keywords (default: 10)")
+def competitors(domain, location, language, limit, min_intersections):
+    """Auto-discover competitor domains + their organic traffic. ~$0.01."""
+    payload = [{
+        "target": domain, "language_code": language, "location_code": int(location),
+        "limit": limit, "order_by": ["intersections,desc"],
+        "filters": [["intersections", ">", min_intersections]],
+    }]
+    click.echo(f"🔍 Discovering competitors of {domain}...")
+    resp = api_post("dataforseo_labs/google/competitors_domain/live", payload)
+    res = _labs_first_result(resp)
+    rows = []
+    for it in res.get("items") or []:
+        m = it.get("metrics", {}).get("organic", {})
+        rows.append({
+            "domain": it.get("domain"),
+            "shared_kws": it.get("intersections"),
+            "total_kws": m.get("count", 0),
+            "est_traffic": round(m.get("etv", 0)),
+        })
+    auto_save(rows, "competitors", domain)
+    click.echo(f"\ncompetitors of {domain} | 💰 ${resp.get('cost')}")
+    _labs_print(rows, ["shared_kws", "total_kws", "est_traffic", "domain"], len(rows))
+
+
+@cli.command("keywords-for-site")
+@click.argument("domain")
+@click.option("--location", default="2036", help="Location code (default: 2036 = Australia)")
+@click.option("--language", default="en", help="Language code (default: en)")
+@click.option("--limit", default=200, help="Max keywords (default: 200)")
+@click.option("--output", "-o", help="Output CSV file path")
+def keywords_for_site(domain, location, language, limit, output):
+    """Keywords a domain ranks AND bids on (reveals paid-search spend). ~$0.02."""
+    payload = [{
+        "target": domain, "language_code": language, "location_code": int(location),
+        "limit": limit, "order_by": ["keyword_info.search_volume,desc"],
+    }]
+    click.echo(f"🔍 Keywords {domain} ranks and bids on...")
+    resp = api_post("dataforseo_labs/google/keywords_for_site/live", payload)
+    res = _labs_first_result(resp)
+    rows = []
+    for it in res.get("items") or []:
+        ki = it.get("keyword_info", {}) or {}
+        rows.append({
+            "keyword": it.get("keyword"),
+            "search_volume": ki.get("search_volume") or 0,
+            "cpc": round(ki.get("cpc") or 0, 2),
+            "competition": ki.get("competition_level"),
+        })
+    rows.sort(key=lambda x: -x["search_volume"])
+    if output and rows:
+        with open(output, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
+        path = output
+    else:
+        path = auto_save(rows, "keywords-for-site", domain)
+    click.echo(f"💾 Saved to {path}")
+    click.echo(f"\n{domain}: {len(rows)} keywords | 💰 ${resp.get('cost')}")
+    _labs_print(rows, ["search_volume", "cpc", "competition", "keyword"], min(40, len(rows)))
+
+
 if __name__ == "__main__":
     cli()

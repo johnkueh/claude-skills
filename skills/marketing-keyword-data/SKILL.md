@@ -90,6 +90,49 @@ cd <skill-dir> && uv run python cli.py suggestions "seed keyword" --limit 100
 cd <skill-dir> && uv run python cli.py related "keyword"
 ```
 
+### Competitor Commands (DataForSEO Labs)
+
+Reverse-engineer what a *competitor domain* actually ranks for, instead of
+guessing seed keywords. The fastest way to discover the real high-value keywords
+in a niche is to pull them straight off the sites already ranking. All accept
+`--location` (default 2036 = Australia; use `--location 2840` for US).
+
+#### Domain overview — organic footprint (~$0.01/domain)
+```bash
+cd <skill-dir> && uv run python cli.py domain-overview competitor.com other.com --location 2840
+# -> keyword count, estimated organic traffic/mo (etv), and $ traffic value
+```
+
+#### Ranked keywords — every keyword a domain ranks for (~$0.02-0.05)
+```bash
+cd <skill-dir> && uv run python cli.py ranked-keywords competitor.com --max-pos 20 --min-vol 50 --location 2840
+# -> keyword, volume, cpc, position, est traffic, ranking URL. Auto-saved to results/.
+```
+
+#### Intersection — keywords BOTH domains rank for, i.e. gap analysis (~$0.02)
+```bash
+cd <skill-dir> && uv run python cli.py intersection competitorA.com competitorB.com --min-vol 40 --location 2840
+# -> shared keywords both already rank for = the proven category terms to target
+```
+
+#### Competitors — auto-discover competitor domains (~$0.01)
+```bash
+cd <skill-dir> && uv run python cli.py competitors competitor.com --location 2840
+# -> rival domains by shared keywords, each with total kw count + est traffic
+```
+
+#### Keywords for site — terms a domain ranks AND bids on (~$0.02)
+```bash
+cd <skill-dir> && uv run python cli.py keywords-for-site competitor.com --location 2840
+# -> reveals where a competitor spends paid-search budget
+```
+
+**Competitor research workflow:** `domain-overview` a few rivals to find who has
+the real traffic → `ranked-keywords` the leaders to harvest their winning terms →
+`intersection` two close rivals to find the proven shared category keywords →
+`competitors` to surface rivals you didn't know about → batch the harvested
+keywords through `volume` for fresh intent + CPC.
+
 ### Analysis Commands (analyze.py)
 
 #### List result files
@@ -205,6 +248,11 @@ uv run python cli.py suggestions "software" --location 2840 --filter "keyword_in
 | `volume --no-intent` | $0.075 (skip intent) |
 | `suggestions` (+ clickstream) | $0.02 + $0.0002/result |
 | `related` (+ clickstream) | $0.02 + $0.0002/result |
+| `ranked-keywords` (Labs) | ~$0.02-0.05 |
+| `domain-overview` (Labs) | ~$0.01/domain |
+| `intersection` (Labs) | ~$0.02 |
+| `competitors` (Labs) | ~$0.01 |
+| `keywords-for-site` (Labs) | ~$0.02 |
 | `balance` | FREE |
 | `costs` | FREE |
 | `analyze.py *` | FREE (local) |
