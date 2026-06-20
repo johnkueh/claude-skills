@@ -1,9 +1,9 @@
 ---
-name: dev-dev-vercel-logs
+name: dev-vercel-logs
 description: "Query Vercel runtime and build logs to debug production issues. PREFER THE CLI over the MCP for log search — the MCP runtime-logs tool truncates message bodies. Use when debugging a production error, investigating a 500 / 4xx, looking at deployment build output, or any 'what happened on Vercel' question. Triggers on 'vercel logs', 'production error', 'vercel debug', 'deployment logs', 'build logs', 'what's failing in prod', 'check vercel'."
 ---
 
-# dev-dev-vercel-logs
+# dev-vercel-logs
 Query Vercel logs from the command line. CLI ≥51.7 supports a backfill mode the MCP doesn't replicate.
 
 ## First — does this project have bq-analytics installed?
