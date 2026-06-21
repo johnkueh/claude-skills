@@ -65,6 +65,26 @@ Safety: `dev-down` only kills processes dev-up started (pidfile under
 `~/.dev-up/<name>/`); for servers started by hand it refuses unless `--force`.
 `dev-up` is idempotent — if the route is already live it just reprints the URLs.
 
+### Simulator pool: `dev-up --sim` (Expo, opt-in)
+
+`dev-up --sim` (or `DEVUP_HANGAR=1 dev-up`) leases a simulator from the
+[hangar](../hangar) pool before starting Metro, so many worktrees/agents each
+get their own sim **and** Metro port with no collisions; `dev-down` releases the
+lease (sim returns to the pool). Without `--sim`, behavior is unchanged. The
+leased port reaches Metro two ways, both already wired:
+
+- **Has a `dev` script:** make its port overridable — `expo start … --port
+  ${MT_PORT:-8082}` (zero-regression: unset → the old default). The lease exports
+  `MT_PORT`; the script binds it; metro-takeover waits on it.
+- **No committed `dev` script** (team monorepo): set `MT_CMD` (+ `MT_APP_DIR` /
+  `MT_SCHEME`) in `~/.dev-up/projects/<repo>.env` — a machine-local, never-committed
+  override file `dev-up` sources by the main checkout's dir name. Force the Expo
+  surface with `dev-up app --sim` when the app isn't at `$ROOT/app`.
+
+**Mobile web (no Metro), e.g. Safari QA:** there's nothing to delegate — start the
+web server with `dev-up`, lease a sim yourself (`eval "$(hangar lease --app x)"`),
+and drive Safari at the printed URL with `argent … --udid "$HANGAR_UDID" open-url`.
+
 ## Architecture
 
 ```

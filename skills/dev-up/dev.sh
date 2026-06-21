@@ -22,6 +22,13 @@
 #   - cwd inside app/ with an expo dep -> delegates to metro-takeover.sh
 #
 # Env overrides: DEVUP_TLD (public suffix), DEVUP_NAME (route name).
+#
+# Simulator pool (Expo): `dev-up --sim` (or DEVUP_HANGAR=1) leases a sim from the
+# hangar pool before starting Metro, so many worktrees/agents each get their own
+# sim + Metro port without colliding; `dev-down` releases it. Default behavior is
+# unchanged when --sim is absent. Per-project, machine-local overrides (never
+# committed — for a team monorepo that can't carry a dev script, e.g. MT_CMD /
+# MT_APP_DIR / MT_SCHEME) are sourced from ~/.dev-up/projects/<repo>.env.
 
 set -uo pipefail
 
@@ -198,15 +205,39 @@ print_summary() { # $1=name $2=port $3=tld $4=log
   printf '  Stop:    dev-down %s\n\n' "$1"
 }
 
+# Source machine-local, never-committed per-project overrides (MT_CMD / MT_APP_DIR
+# / MT_SCHEME / MT_PORT …) keyed by the main checkout's dir name. This is how a
+# team monorepo that can't carry a dev script opts in fully out-of-repo.
+source_project_overrides() {
+  local ovr="$STATE_DIR/projects/$(basename "$MAIN").env"
+  if [[ -f "$ovr" ]]; then
+    note "env: sourcing per-project overrides ($ovr)"
+    set -a; . "$ovr"; set +a
+  fi
+}
+
 # ---- dev-up -------------------------------------------------------------------
 
 cmd_up() {
-  local forced=""
-  [[ "${1:-}" == "app" || "${1:-}" == "web" ]] && forced="$1"
+  local forced="" want_sim="${DEVUP_HANGAR:-0}" a
+  for a in "$@"; do
+    case "$a" in
+      app|web) forced="$a" ;;
+      --sim)   want_sim=1 ;;
+    esac
+  done
   resolve_project "$forced"
+  source_project_overrides
 
   if [[ "$SURFACE" == "expo" ]]; then
-    note "expo surface — delegating to metro-takeover.sh (simulator-local Metro)"
+    if [[ "$want_sim" == "1" ]]; then
+      command -v hangar >/dev/null 2>&1 || die "--sim/DEVUP_HANGAR=1 needs 'hangar' on PATH (install the hangar skill)"
+      note "hangar: leasing a simulator from the pool…"
+      local leasesh; leasesh=$(hangar lease --app "$(basename "$MAIN")") || die "hangar lease failed"
+      eval "$leasesh"
+      note "hangar: leased UDID=${HANGAR_UDID:-?} on port ${HANGAR_PORT:-?}"
+    fi
+    note "expo surface — delegating to metro-takeover.sh (Metro on port ${MT_PORT:-<dev-script default>})"
     exec "$SCRIPT_DIR/metro-takeover.sh"
   fi
 
@@ -318,16 +349,32 @@ cmd_down() {
   # infer from cwd
   resolve_project ""
   if [[ "$SURFACE" == "expo" ]]; then
-    local devs port
-    devs=$(node -e "process.stdout.write((require('$ROOT/app/package.json').scripts||{}).dev||'')" 2>/dev/null || true)
-    port=$(printf '%s' "$devs" | grep -oE -- '--port[= ]+[0-9]+' | grep -oE '[0-9]+' | head -1)
-    port="${port:-8081}"
+    source_project_overrides
+    local devs port=""
+    # leased port wins (a hangar lease held for this branch), then MT_PORT, then
+    # the dev script's --port, then 8081.
+    if command -v hangar >/dev/null 2>&1; then
+      port=$(hangar ls --json 2>/dev/null | node -e "
+        let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{
+          try{const j=JSON.parse(s);const l=(j.leases||[]).find(x=>x.agent===process.argv[1]);
+            process.stdout.write(l&&l.metroPort?String(l.metroPort):'');}
+          catch(_){process.stdout.write('');}});" "$BRANCH" 2>/dev/null || true)
+    fi
+    if [[ -z "$port" ]]; then
+      port="${MT_PORT:-}"
+      if [[ -z "$port" ]]; then
+        devs=$(node -e "process.stdout.write((require('$ROOT/app/package.json').scripts||{}).dev||'')" 2>/dev/null || true)
+        port=$(printf '%s' "$devs" | grep -oE -- '--port[= ]+[0-9]+' | grep -oE '[0-9]+' | head -1)
+      fi
+      port="${port:-8081}"
+    fi
     if port_listening "$port"; then
       local p; for p in $(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t); do kill_tree "$p"; done
       green "Metro on :$port stopped"
     else
       note "Metro not running on :$port"
     fi
+    command -v hangar >/dev/null 2>&1 && { hangar release >/dev/null 2>&1 && note "hangar: released lease (sim returned to pool)"; } || true
     return 0
   fi
   resolve_name_and_cmd
