@@ -333,6 +333,10 @@ cmd_down() {
   for a in "$@"; do
     [[ "$a" == "--force" ]] && FORCE=1 || args+=("$a")
   done
+  # `app`/`web` forces the surface (mirrors dev-up) so dev-down works for an Expo
+  # app that isn't at $ROOT/app (resolved via a per-project override, e.g. clove).
+  local forced=""
+  if [[ "${args[0]:-}" == "app" || "${args[0]:-}" == "web" ]]; then forced="${args[0]}"; args=("${args[@]:1}"); fi
   if [[ "${args[0]:-}" == "--all" ]]; then
     local d found=0
     for d in "$STATE_DIR"/*/; do
@@ -346,8 +350,8 @@ cmd_down() {
     stop_one "${args[0]}"
     return $?
   fi
-  # infer from cwd
-  resolve_project ""
+  # infer from cwd (or the forced surface)
+  resolve_project "$forced"
   if [[ "$SURFACE" == "expo" ]]; then
     source_project_overrides
     local devs port=""
