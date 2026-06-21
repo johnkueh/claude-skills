@@ -11,6 +11,12 @@
 #   MT_PORT      Metro port (default: parse --port N from dev script, else 8081)
 #   MT_URL       public tunnel URL (default: parse EXPO_PACKAGER_PROXY_URL from dev script)
 #   MT_SCHEME    deeplink scheme (default: app.json expo.scheme, else `npx expo config`)
+#   MT_CMD       full command to start Metro, for apps with no committed `dev`
+#                script (e.g. a team monorepo driven entirely from tooling). The
+#                target port is appended as --port <N> unless MT_CMD already pins
+#                one, and MT_CMD doubles as the string parsed for --port / proxy
+#                URL / env. Pair with MT_APP_DIR + MT_SCHEME for a fully
+#                out-of-repo opt-in — nothing committed to the target project.
 
 set -euo pipefail
 
@@ -48,13 +54,21 @@ DEV_SCRIPT=$(node -e "
   const p = require('$PKG_JSON');
   process.stdout.write(p.scripts && p.scripts.dev ? p.scripts.dev : '');
 ")
-[[ -n "$DEV_SCRIPT" ]] || die "no \"dev\" script in $PKG_JSON"
+# SPEC is the string parsed for --port / proxy URL / scheme-env. By default it's
+# the package.json `dev` script. MT_CMD overrides it for projects with no
+# committed `dev` script (the launch command is taken from MT_CMD below too).
+if [[ -n "${MT_CMD:-}" ]]; then
+  SPEC="$MT_CMD"
+else
+  [[ -n "$DEV_SCRIPT" ]] || die "no \"dev\" script in $PKG_JSON (set MT_CMD to start Metro without one)"
+  SPEC="$DEV_SCRIPT"
+fi
 
 # ---- detect port ------------------------------------------------------------
 
 PORT="${MT_PORT:-}"
 if [[ -z "$PORT" ]]; then
-  PORT=$(printf '%s' "$DEV_SCRIPT" | grep -oE -- '--port[= ]+[0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+  PORT=$(printf '%s' "$SPEC" | grep -oE -- '--port[= ]+[0-9]+' | grep -oE '[0-9]+' | head -1 || true)
 fi
 PORT="${PORT:-8081}"
 
@@ -62,7 +76,7 @@ PORT="${PORT:-8081}"
 
 URL="${MT_URL:-}"
 if [[ -z "$URL" ]]; then
-  URL=$(printf '%s' "$DEV_SCRIPT" | grep -oE 'EXPO_PACKAGER_PROXY_URL=[^ ]+' | head -1 | cut -d= -f2- || true)
+  URL=$(printf '%s' "$SPEC" | grep -oE 'EXPO_PACKAGER_PROXY_URL=[^ ]+' | head -1 | cut -d= -f2- || true)
 fi
 if [[ -z "$URL" ]]; then
   yellow "metro-takeover: no EXPO_PACKAGER_PROXY_URL in dev script — falling back to http://localhost:$PORT (LAN-only)"
@@ -96,7 +110,7 @@ detect_scheme() {
   log "metro-takeover: resolving scheme via 'npx expo config' (slow, ~3s)…"
   local env_args=()
   while IFS= read -r kv; do env_args+=("$kv"); done < <(
-    printf '%s' "$DEV_SCRIPT" | grep -oE '[A-Z_][A-Z0-9_]*=[^ ]+' || true
+    printf '%s' "$SPEC" | grep -oE '[A-Z_][A-Z0-9_]*=[^ ]+' || true
   )
   # Resolve expo binary explicitly — pnpm monorepos hoist it to the root
   # node_modules/.bin and `npx --no-install` can fail to walk up.
@@ -165,10 +179,18 @@ fi
 BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null || echo detached)
 SAFE_BRANCH=${BRANCH//\//-}
 LOG="/tmp/metro-${SAFE_BRANCH}.log"
-log "metro-takeover: starting Metro in $APP_DIR ($PM dev) → $LOG"
+# Launch command: MT_CMD verbatim (with --port appended unless it pins one), or
+# the package.json `dev` script via the detected package manager.
+if [[ -n "${MT_CMD:-}" ]]; then
+  LAUNCH="$MT_CMD"
+  grep -qE -- '--port[= ]' <<<"$LAUNCH" || LAUNCH="$LAUNCH --port $PORT"
+else
+  LAUNCH="$PM run dev"
+fi
+log "metro-takeover: starting Metro in $APP_DIR ($LAUNCH) → $LOG"
 
-# nohup + setsid keeps Metro alive after this script exits.
-( cd "$APP_DIR" && nohup "$PM" run dev > "$LOG" 2>&1 < /dev/null & disown ) || die "failed to spawn Metro"
+# nohup keeps Metro alive after this script exits.
+( cd "$APP_DIR" && nohup bash -c "$LAUNCH" > "$LOG" 2>&1 < /dev/null & disown ) || die "failed to spawn Metro"
 
 # ---- wait for ready ---------------------------------------------------------
 

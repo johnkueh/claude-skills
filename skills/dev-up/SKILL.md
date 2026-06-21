@@ -188,9 +188,23 @@ Autodetects from the skill-conformant setup; override with env vars:
 | Port | `--port N` parsed from the `dev` script; fallback 8081 | `MT_PORT` |
 | Tunnel URL | `EXPO_PACKAGER_PROXY_URL` from the dev script; fallback localhost | `MT_URL` |
 | Scheme | `app.json` → `expo config --json` run with the dev script's env (so `isDev ? 'x-dev' : 'x'` resolves the dev variant) | `MT_SCHEME` |
+| Launch | `<pm> run dev` (requires a `dev` script) | `MT_CMD` |
 
 pnpm monorepo case handled: resolves `<app>/node_modules/.bin/expo`, then
 `<root>/…`, then `$PATH` (npx doesn't always walk up to the hoisted binary).
+
+**No committed `dev` script? `MT_CMD`.** Projects driven entirely from tooling —
+a reviewed team monorepo you don't want to commit a personal dev script into —
+opt in fully out-of-repo: set `MT_CMD` to the full start command, `MT_APP_DIR`
+to the app dir, `MT_SCHEME` to the dev-client scheme, and `MT_PORT` to the port
+(e.g. a hangar-leased one). `MT_CMD` gets `--port <N>` appended unless it pins
+one itself. Nothing lands in the target repo — no `dev` script, no PR, survives
+rebases. Example (a monorepo app at `clients/apps/expo` with no `dev` script):
+
+```bash
+MT_APP_DIR="$REPO/clients/apps/expo" MT_CMD="expo start --dev-client" \
+  MT_SCHEME="exp+myapp" MT_PORT="$HANGAR_PORT" metro-takeover.sh
+```
 
 ## Expo QA: fingerprint gate + EAS Update publish (`expo-qa.sh`)
 
