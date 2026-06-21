@@ -187,10 +187,23 @@ if [[ -n "${MT_CMD:-}" ]]; then
 else
   LAUNCH="$PM run dev"
 fi
+
+# Put node_modules/.bin on PATH for the launch. `pnpm run` adds it automatically,
+# but MT_CMD runs via `bash -c`, which doesn't — so a bare `expo`/`react-native`
+# in MT_CMD wouldn't resolve. Walk from the app dir up to the repo root so a
+# monorepo-hoisted bin resolves at whatever level it lives (e.g. an intermediate
+# workspace's node_modules/.bin).
+BIN_PATH="" d="$APP_DIR"
+while :; do
+  [[ -d "$d/node_modules/.bin" ]] && BIN_PATH="$BIN_PATH$d/node_modules/.bin:"
+  [[ "$d" == "$ROOT" || "$d" == "/" ]] && break
+  d=$(dirname "$d")
+done
+
 log "metro-takeover: starting Metro in $APP_DIR ($LAUNCH) → $LOG"
 
 # nohup keeps Metro alive after this script exits.
-( cd "$APP_DIR" && nohup bash -c "$LAUNCH" > "$LOG" 2>&1 < /dev/null & disown ) || die "failed to spawn Metro"
+( cd "$APP_DIR" && PATH="$BIN_PATH$PATH" nohup bash -c "$LAUNCH" > "$LOG" 2>&1 < /dev/null & disown ) || die "failed to spawn Metro"
 
 # ---- wait for ready ---------------------------------------------------------
 
