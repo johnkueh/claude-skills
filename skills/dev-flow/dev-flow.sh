@@ -501,24 +501,31 @@ pr_merge() {
   if out=$(gh pr merge "${squash[@]}" 2>&1); then
     green "PR merged"
     printf '%s\n' "$out"
+    local branch default_branch
+    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+    default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || true)
+    default_branch="${default_branch:-main}"
     # Delete the merged remote branch. gh's own --delete-branch couples in the
     # local checkout (it tries to switch off the branch) which is fragile inside
     # a worktree, so we delete the REMOTE explicitly here and leave the local
     # branch for `dev-flow teardown`. A squash merge in particular leaves the
     # remote branch behind otherwise (it never auto-deletes on squash).
-    if [[ "$keep_branch" == 0 ]]; then
-      local branch default_branch
-      branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
-      default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || true)
-      default_branch="${default_branch:-main}"
-      if [[ -n "$branch" && "$branch" != "HEAD" && "$branch" != "$default_branch" ]]; then
-        if git push origin --delete "$branch" >/dev/null 2>&1; then
-          green "deleted remote branch origin/$branch"
-        else
-          note "remote branch origin/$branch already gone (or no delete perms) — skipped"
-        fi
+    if [[ "$keep_branch" == 0 && -n "$branch" && "$branch" != "HEAD" && "$branch" != "$default_branch" ]]; then
+      if git push origin --delete "$branch" >/dev/null 2>&1; then
+        green "deleted remote branch origin/$branch"
+      else
+        note "remote branch origin/$branch already gone (or no delete perms) — skipped"
       fi
     fi
+    # Refresh the local default branch right after the merge so the NEXT worktree
+    # bases off the just-merged state, not a stale local ref (the cause of the
+    # "stale local $default_branch" drift). Fast-forwarding the local ref only
+    # works when it isn't checked out anywhere, so try that and fall back to
+    # refreshing origin/$default_branch — both are safe and neither touches the
+    # (WIP-parked) main working tree.
+    git fetch origin "$default_branch:$default_branch" -q 2>/dev/null \
+      || git fetch origin "$default_branch" -q 2>/dev/null || true
+    note "refreshed $default_branch from origin (post-merge)"
     return 0
   fi
   printf '%s\n' "$out" >&2
