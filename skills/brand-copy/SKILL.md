@@ -103,7 +103,7 @@ The practical rulebook.
 
 ### Punctuation
 - **Oxford comma, always.** "Eggs, milk, and bread."
-- **Em dash —** for asides and emphasis. No spaces around it.
+- **Em dash —** for asides and emphasis. No spaces around it. Use sparingly — a string peppered with dashes reads as filler.
 - **Hyphen -** for compound modifiers (well-known, full-time).
 - **En dash –** for ranges (Mon–Fri, 5–10).
 - **Ampersands** only inside brand or company names. Otherwise "and".
