@@ -735,6 +735,12 @@ program
   .option("--background <bg>", "auto|transparent|opaque", "auto")
   .option("--n <n>", "Images to generate (1-10).", (v) => parseInt(v, 10), 1)
   .option("-o, --out <path>", "Output path (default: cwd/<ts>-<slug>.<fmt>).")
+  .option(
+    "--ref <path>",
+    "Reference image(s) to condition on (style/subject bible → coherence, anti-drift). Repeat for multi-image input; routes through the image-edit path.",
+    collect,
+    [],
+  )
   .option("--compression <pct>", "0-100, jpeg/webp only.", (v) => parseInt(v, 10))
   .option("-t, --transparent", "Magenta-bg + chroma-key → transparent PNG. Forces png + opaque.")
   .option("--dry-run", "Print estimate and exit.")
@@ -755,6 +761,8 @@ program
   .option("--oauth-port <port>", "openai-oauth proxy port.", (v) => parseInt(v, 10), OAUTH_DEFAULT_PORT)
   .action(async (opts) => {
     let { prompt, size, quality, format: fmt, background } = opts;
+    const refs: string[] = opts.ref ?? [];
+    for (const r of refs) if (!existsSync(r)) die(`Error: ref not found: ${r}`, 2);
     validateChoice("size", size, SIZES);
     validateChoice("quality", quality, QUALITIES);
     validateChoice("format", fmt, FORMATS);
@@ -778,7 +786,7 @@ program
         quality,
         model: opts.model,
         webSearch: !!opts.webSearch,
-        refs: [],
+        refs,
         fmt,
         out: opts.out,
         transparent: !!opts.transparent,
@@ -790,8 +798,8 @@ program
       return;
     }
 
-    const est = await estimateCost(prompt, size, quality, opts.n);
-    err(`Prompt (${prompt.length} chars):`);
+    const est = await estimateCost(prompt, size, quality, opts.n, refs);
+    err(`Prompt (${prompt.length} chars)${refs.length ? `, refs: ${refs.map((r) => parsePath(r).base)}` : ""}:`);
     err(prompt);
     err("");
     printEstimate(est, opts.n);
@@ -800,25 +808,49 @@ program
       return;
     }
 
-    const body: Record<string, unknown> = {
-      model: MODEL,
-      prompt,
-      n: opts.n,
-      size,
-      quality,
-      output_format: fmt,
-      background,
-    };
-    if (opts.compression != null && (fmt === "jpeg" || fmt === "webp")) {
-      body.output_compression = opts.compression;
-    }
-
     const t0 = Date.now();
-    const resp = await fetch(`${API_BASE}/images/generations`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${loadApiKey()}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    let resp: Response;
+    if (refs.length) {
+      // The /images/generations endpoint can't take input images; refs go through /images/edits (mirrors `edit`).
+      const form = new FormData();
+      form.set("model", MODEL);
+      form.set("prompt", prompt);
+      form.set("n", String(opts.n));
+      form.set("size", size);
+      form.set("quality", quality);
+      form.set("output_format", fmt);
+      form.set("background", background);
+      if (refs.length === 1) {
+        form.append("image", new Blob([readFileSync(refs[0])], { type: "image/png" }), parsePath(refs[0]).base);
+      } else {
+        for (const r of refs) {
+          form.append("image[]", new Blob([readFileSync(r)], { type: "image/png" }), parsePath(r).base);
+        }
+      }
+      resp = await fetch(`${API_BASE}/images/edits`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${loadApiKey()}` },
+        body: form,
+      });
+    } else {
+      const body: Record<string, unknown> = {
+        model: MODEL,
+        prompt,
+        n: opts.n,
+        size,
+        quality,
+        output_format: fmt,
+        background,
+      };
+      if (opts.compression != null && (fmt === "jpeg" || fmt === "webp")) {
+        body.output_compression = opts.compression;
+      }
+      resp = await fetch(`${API_BASE}/images/generations`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${loadApiKey()}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    }
     const elapsed = (Date.now() - t0) / 1000;
     if (!resp.ok) die(`API error ${resp.status}: ${await resp.text()}`);
 
@@ -828,13 +860,14 @@ program
 
     logUsage({
       ts: new Date().toISOString(),
-      mode: "generate",
+      mode: refs.length ? "edit" : "generate",
       model: MODEL,
       size: data.size ?? size,
       quality: data.quality ?? quality,
       format: data.output_format ?? fmt,
       background: data.background ?? background,
       n: opts.n,
+      ...(refs.length ? { refs } : {}),
       elapsed_s: round(elapsed, 2),
       prompt_preview: prompt.slice(0, 200),
       out_files: saved,

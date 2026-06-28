@@ -47,6 +47,24 @@ pnpm exec tsx cli.ts generate \
   --size 1024x1024 --quality high --format png --out ./field-and-flour.png
 ```
 
+### Generate with reference image(s) — coherence / anti-drift
+
+Pass `--ref` (repeatable) to condition a from-scratch generation on a style/subject
+bible — the same fridge/character/palette across a set of stills, instead of drifting
+into a different one each call. Routes through the image-edit path automatically (the
+generations endpoint can't take input images), so it works on both auth paths.
+
+```bash
+# anchor a series to one reference so every beat is the SAME scene
+pnpm exec tsx cli.ts generate \
+  -p "Same fridge as the reference — identical interior, shelves and lighting. New angle: low, looking up at the bottom shelf." \
+  --ref ./anchor.png --quality high --out ./beat-01.png
+```
+
+(For editing an existing image or multi-ref moodboard/style-transfer, `edit` is the
+dedicated verb — see below. `generate --ref` is the convenience for "new scene, keep
+the bible".)
+
 ### Generate (dry run — see prompt + cost estimate without spending)
 
 ```bash
@@ -210,6 +228,7 @@ yourself in a plain terminal needs none of this — the prompt is Claude-Code-on
 - `--format` — `png` (default), `webp`, `jpeg`
 - `--background` — `auto`, `opaque`. (`transparent` is documented by the API but rejected by gpt-image-2; use `--transparent` instead.)
 - `--transparent` / `-t` — opaque magenta render + soft-matte/despill keyer → clean transparent PNG. Sticker / icon / empty-state use cases. Works on both auth paths.
+- `--ref <path>` (generate + edit) — reference image(s) to condition on (style/subject bible → coherence, anti-drift). Repeatable for multi-image input. On `generate` it routes through the image-edit path; works on both auth paths.
 - `--n` — number of variations (default 1; ignored on the ChatGPT-plan path, which returns 1 per call)
 - `--dry-run` — print prompt + cost estimate, don't call API
 - `--no-open` — don't auto-open the result in Preview
