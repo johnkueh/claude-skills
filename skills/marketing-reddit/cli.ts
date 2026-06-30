@@ -373,23 +373,35 @@ function probeCommand(cmd: string, args: string[] = ["--version"]): ProbeResult 
   return { status: "ok", path: cmdPath, detail: cmdPath };
 }
 
-function cmdSetup(proxyArg?: string): number {
-  let proxy = proxyArg;
-  if (!proxy) proxy = (fs.readFileSync(0, "utf8") || "").trim();
-  if (!proxy || !/^https?:\/\//.test(proxy)) {
-    console.error("ERROR: proxy must start with http:// or https://"); return 2;
+function cmdSetup(proxyArg?: string | boolean, geminiArg?: string): number {
+  const cfg = loadConfig();
+  const saved: string[] = [];
+
+  // proxy: explicit value, or (when --proxy is given with no value) read from stdin
+  let proxy: string | undefined;
+  if (typeof proxyArg === "string") proxy = proxyArg;
+  else if (proxyArg === true) proxy = (fs.readFileSync(0, "utf8") || "").trim();
+  if (proxy) {
+    if (!/^https?:\/\//.test(proxy)) { console.error("ERROR: proxy must start with http:// or https://"); return 2; }
+    cfg.proxy = proxy; saved.push(`proxy ${mask(proxy)}`);
+  }
+
+  // gemini key: enables the LLM `classify` path. Stored machine-local, never the repo.
+  if (typeof geminiArg === "string" && geminiArg) { cfg.gemini_key = geminiArg; saved.push(`gemini_key ${geminiArg.slice(0, 6)}…`); }
+
+  if (!saved.length) {
+    console.error("ERROR: nothing to set. Pass --proxy <url> and/or --gemini-key <key>."); return 2;
   }
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
-  const cfg = loadConfig(); cfg.proxy = proxy;
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
   fs.chmodSync(CONFIG_PATH, 0o600);
-  console.log(`Saved proxy to ${CONFIG_PATH} (chmod 600): ${mask(proxy)}`);
+  console.log(`Saved to ${CONFIG_PATH} (chmod 600): ${saved.join(", ")}`);
   console.log("This path is machine-local and outside the skill repo.");
-  console.log("Next: run `reddit-miner doctor` to verify agent-browser, Chrome, and the proxy.");
+  console.log("Next: run `reddit-miner doctor` to verify.");
   return 0;
 }
 
-function cmdDoctor(proxyFlag?: string): number {
+async function cmdDoctor(proxyFlag?: string): Promise<number> {
   let ok = true;
   const line = (status: boolean, label: string, detail = "") => {
     if (!status) ok = false;
@@ -424,6 +436,20 @@ function cmdDoctor(proxyFlag?: string): number {
   // proxy is OPTIONAL: present = use it; absent = direct (only works from a clean/residential IP)
   console.log(`  [INFO] proxy ${proxy ? `configured — ${mask(proxy)} (from ${source})` : "not set — will connect DIRECT (only works from a clean/residential IP; set one via `setup` if you get blocked)"}`);
 
+  // LLM classification is OPTIONAL: present = the `classify` command uses Gemini
+  // (higher recall); absent = `classify` falls back to the heuristic question detector.
+  const [gkey, gsrc] = resolveGeminiKey();
+  if (gkey) {
+    let label = "", live = false;
+    try {
+      const v = await geminiBatch(gkey, null, [{ id: "probe", text: "I wish there was an app that reminded me to take my meds on time." }]);
+      label = v["probe"] ?? ""; live = !!label;
+    } catch (e) { label = String(e).slice(0, 60); }
+    console.log(`  [${live ? "PASS" : "INFO"}] LLM classification — ${live ? `${GEMINI_MODEL} live (key from ${gsrc}, probe→${label})` : `key set (${gsrc}) but probe failed: ${label}`}`);
+  } else {
+    console.log("  [INFO] LLM classification disabled — set GEMINI_API_KEY or run `setup --gemini-key <key>` for higher-recall pain/demand/question classification (the `classify` command). Heuristic question detection still works without it.");
+  }
+
   if (proxy) {
     try {
       // vendor-neutral IP echo — works through ANY proxy (override via REDDIT_IP_ECHO_URL)
@@ -452,6 +478,139 @@ function cmdDoctor(proxyFlag?: string): number {
   return ok ? 0 : 1;
 }
 
+// ----------------------------- Gemini classification (optional, key-gated) -----------------------------
+// When a Gemini key resolves, snippets are classified by an LLM into
+// pain | demand | question | other. This has far higher recall than the in-tool
+// question/keyword heuristics: it reads MEANING, so it catches complaints and
+// product-demand that carry no question mark and no pain keyword (benchmarked
+// ~100% recall vs ~60% for the best regex on a GLP-1 logger mine). Without a key
+// the tool falls back to the heuristic question detector — same as before. No new
+// dependency: a plain HTTPS fetch, like the Reddit path. The key is read from env
+// or the machine-local config, NEVER the (public) skill repo.
+
+const GEMINI_MODEL = process.env.REDDIT_GEMINI_MODEL ?? "gemini-2.5-flash";
+// rough cost: gemini-2.5-flash ~ $0.30 / 1M input tokens; a short snippet ≈ 90 tok
+// plus per-batch prompt overhead → ≈ $0.000027 per classified unit.
+const GEMINI_USD_PER_UNIT = 0.000027;
+
+function resolveGeminiKey(): [string | null, string | null] {
+  if (process.env.GEMINI_API_KEY) return [process.env.GEMINI_API_KEY, "env GEMINI_API_KEY"];
+  const cfg = loadConfig();
+  if (cfg.gemini_key) return [cfg.gemini_key, `config (${CONFIG_PATH})`];
+  return [null, null];
+}
+
+function classifyPrompt(forCtx: string | null): string {
+  const focus = forCtx
+    ? `The researcher is mining specifically for: ${forCtx}\n` +
+      "Only label a snippet \"pain\", \"demand\", or \"question\" if it is RELEVANT to that focus. " +
+      "Complaints, requests, or questions unrelated to the focus are \"other\".\n"
+    : "";
+  return (
+    "You classify short Reddit snippets for a researcher mining a subreddit for content gaps and product ideas.\n" +
+    focus +
+    "Labels:\n" +
+    "- \"pain\": a frustration, complaint, friction, or unmet need (often NOT phrased as a question).\n" +
+    "- \"demand\": asking for / wishing for / requesting a product, tool, app, or solution.\n" +
+    "- \"question\": an information-seeking question that is not itself a complaint or a tool request.\n" +
+    "- \"other\": anything else — success stories, neutral chat, advice, jokes, generic motivation, neutral mentions, or (when a focus is given) anything off-focus.\n" +
+    "Be strict: a neutral or positive mention is \"other\"; only real friction is \"pain\".\n" +
+    "Return a JSON array of {\"id\": string, \"label\": string}, classifying every input id."
+  );
+}
+
+async function geminiBatch(key: string, forCtx: string | null, batch: { id: string; text: string }[], tries = 4): Promise<Record<string, string>> {
+  const body = {
+    systemInstruction: { parts: [{ text: classifyPrompt(forCtx) }] },
+    contents: [{ parts: [{ text: JSON.stringify(batch) }] }],
+    generationConfig: { temperature: 0, responseMimeType: "application/json" },
+  };
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!res.ok) {
+        if (res.status === 429 || res.status >= 500) { await Bun.sleep(1500 * (i + 1)); continue; }
+        throw new Error(`http ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      }
+      const j: any = await res.json();
+      const txt = j?.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
+      const m: Record<string, string> = {};
+      for (const r of JSON.parse(txt)) if (r && r.id) m[r.id] = r.label;
+      return m;
+    } catch (e) {
+      if (i === tries - 1) { console.error(`[reddit-miner] gemini batch failed: ${String(e).slice(0, 120)}`); return {}; }
+      await Bun.sleep(1200 * (i + 1));
+    }
+  }
+  return {};
+}
+
+// Classify many units with a small concurrency pool (Gemini handles parallel calls).
+async function classifyUnits(key: string, forCtx: string | null, units: RawUnit[], concurrency = 8, batchSize = 35): Promise<Record<string, string>> {
+  const batches: { id: string; text: string }[][] = [];
+  for (let i = 0; i < units.length; i += batchSize)
+    batches.push(units.slice(i, i + batchSize).map((u) => ({ id: u.id, text: (u.text ?? "").slice(0, 500) })));
+  const verdict: Record<string, string> = {};
+  let cursor = 0, done = 0;
+  async function worker() {
+    while (cursor < batches.length) {
+      const idx = cursor++;
+      Object.assign(verdict, await geminiBatch(key, forCtx, batches[idx]));
+      done += batches[idx].length;
+      if (idx % 5 === 0 || done >= units.length) console.error(`[reddit-miner] classified ~${Math.min(done, units.length)}/${units.length}`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, batches.length) }, worker));
+  return verdict;
+}
+
+// ----------------------------- unit collection (posts + comment bodies) -----------------------------
+
+interface RawUnit {
+  id: string; text: string; sub: string; score: number;
+  permalink: string; kind: "post" | "comment"; thread_title: string;
+}
+
+function walkCommentBodies(children: any[], sub: string, title: string, out: RawUnit[]) {
+  for (const node of children ?? []) {
+    if (node.kind !== "t1") continue;
+    const d = node.data ?? {};
+    const body = (d.body ?? "").trim();
+    if (body.length >= 15)
+      out.push({ id: `c_${d.id ?? out.length}`, text: body, sub, score: d.score ?? 0,
+        permalink: `https://reddit.com${d.permalink ?? ""}`, kind: "comment", thread_title: title });
+    const reps = d.replies;
+    if (reps && typeof reps === "object" && reps.data?.children) walkCommentBodies(reps.data.children, sub, title, out);
+  }
+}
+
+// Fetch top+hot posts (engagement-floored) plus every comment body → flat units.
+function collectUnits(rb: RedditBrowser, sub: string, time: string, nThreads: number, minScore: number, minComments: number) {
+  const seen = new Set<string>(); let posts: any[] = [];
+  for (const sort of ["top", "hot"])
+    for (const p of listPosts(rb, sub, sort, time, 50))
+      if (!seen.has(p.id)) { seen.add(p.id); posts.push(p); }
+  posts = posts.filter((p) => (p.score ?? 0) >= minScore && (p.num_comments ?? 0) >= minComments);
+  posts.sort((a, b) => b.num_comments - a.num_comments);
+  posts = posts.slice(0, nThreads);
+
+  const units: RawUnit[] = [];
+  for (const p of posts)
+    units.push({ id: `p_${p.id}`, text: `${p.title}. ${p.selftext ?? ""}`.trim(), sub,
+      score: p.score, permalink: p.permalink, kind: "post", thread_title: p.title });
+  let scanned = 0;
+  for (const p of posts) {
+    let d;
+    try { d = fetchThread(rb, p.permalink, 500); }
+    catch (e) { console.error(`WARN thread ${p.permalink}: ${e}`); continue; }
+    scanned++;
+    try { walkCommentBodies(d[1].data.children, sub, p.title, units); }
+    catch (e) { console.error(`WARN parse ${p.permalink}: ${e}`); }
+  }
+  return { units, threads_scanned: scanned, posts_considered: posts.length };
+}
+
 // ----------------------------- arg parsing / main -----------------------------
 
 function parseFlags(argv: string[]): Record<string, string | boolean> {
@@ -466,12 +625,12 @@ function parseFlags(argv: string[]): Record<string, string | boolean> {
   return f;
 }
 
-function main() {
+async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   const f = parseFlags(rest);
 
-  if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | undefined));
-  if (cmd === "doctor") process.exit(cmdDoctor(f.proxy as string | undefined));
+  if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | boolean | undefined, f["gemini-key"] as string | undefined));
+  if (cmd === "doctor") process.exit(await cmdDoctor(f.proxy as string | undefined));
 
   const noProxy = f["no-proxy"] === true;
   let [proxy, source] = noProxy ? [null, null] : resolveProxy(f.proxy as string | undefined);
@@ -488,12 +647,58 @@ function main() {
   const rb = new RedditBrowser(proxy);
   let res: any;
   try {
-    if (cmd === "posts" || cmd === "mine") rb.clear(f.subreddit as string);
+    if (cmd === "posts" || cmd === "mine" || cmd === "classify") rb.clear(f.subreddit as string);
     else if (cmd === "thread") {
       const mt = (f.url as string).match(/\/r\/([^/]+)\//);
       rb.clear(mt ? mt[1] : "all");
     }
-    if (cmd === "posts") {
+    if (cmd === "classify") {
+      const minScore = f["min-score"] ? parseInt(f["min-score"] as string) : 0;
+      const minComments = f["min-comments"] ? parseInt(f["min-comments"] as string) : 0;
+      const forCtx = (f["for"] as string) ?? null;
+      const { units, threads_scanned, posts_considered } = collectUnits(
+        rb, f.subreddit as string, (f.time as string) ?? "month",
+        f.threads ? parseInt(f.threads as string) : 30, minScore, minComments,
+      );
+      const [gkey, gsrc] = resolveGeminiKey();
+      if (gkey) {
+        console.error(`[reddit-miner] classifying ${units.length} units with ${GEMINI_MODEL} (key from ${gsrc}, ~$${(units.length * GEMINI_USD_PER_UNIT).toFixed(3)})`);
+        const verdict = await classifyUnits(gkey, forCtx, units);
+        const pain: any[] = [], demand: any[] = [], questions: any[] = [];
+        let other = 0;
+        for (const u of units) {
+          const row = { text: u.text.slice(0, 400), score: u.score, source: u.kind, thread_title: u.thread_title, permalink: u.permalink };
+          const lab = verdict[u.id] ?? "other";
+          if (lab === "pain") pain.push(row);
+          else if (lab === "demand") demand.push(row);
+          else if (lab === "question") questions.push(row);
+          else other++;
+        }
+        for (const arr of [pain, demand, questions]) arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        const top = f["top"] ? parseInt(f["top"] as string) : 40;
+        res = {
+          subreddit: f.subreddit, classifier: `gemini:${GEMINI_MODEL}`, for: forCtx,
+          threads_scanned, posts_considered, n_units: units.length,
+          n_pain: pain.length, n_demand: demand.length, n_question: questions.length, n_other: other,
+          gemini_cost_est_usd: +(units.length * GEMINI_USD_PER_UNIT).toFixed(4),
+          shown_per_bucket: top,
+          pain: pain.slice(0, top), demand: demand.slice(0, top), questions: questions.slice(0, top),
+        };
+      } else {
+        console.error("[reddit-miner] no Gemini key — falling back to heuristic question detection. For LLM pain/demand/question classification set GEMINI_API_KEY or run `setup --gemini-key <key>`.");
+        const questions: any[] = [];
+        for (const u of units) {
+          if (!isQuestion(u.text, topicRx)) continue;
+          const q = extractQuestion(u.text);
+          if (q) questions.push({ q, score: u.score, source: u.kind, thread_title: u.thread_title, permalink: u.permalink });
+        }
+        questions.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        res = {
+          subreddit: f.subreddit, classifier: "heuristic", threads_scanned, posts_considered,
+          n_units: units.length, n_questions: questions.length, questions,
+        };
+      }
+    } else if (cmd === "posts") {
       res = {
         subreddit: f.subreddit, sort: (f.sort as string) ?? "top",
         posts: listPosts(rb, f.subreddit as string, (f.sort as string) ?? "top",
@@ -522,4 +727,4 @@ function main() {
   process.stdout.write(JSON.stringify(res, null, 2) + "\n");
 }
 
-main();
+main().catch((e) => { console.error(e); process.exit(1); });

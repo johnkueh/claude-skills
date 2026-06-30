@@ -100,7 +100,7 @@
     },
     {
       "name": "marketing-reddit",
-      "description": "Pull structured data from Reddit (posts, threads, comments, and question clusters) through a headless browser that bypasses Reddit's JS bot-challenge. Use when Reddit's public .json API is 403-blocked from a server/cloud IP, or when mining a subreddit for content gaps, questions, or post data. Triggers on \"mine reddit\", \"reddit-miner\", \"scrape subreddit\", \"reddit questions\", \"reddit 403\", \"reddit blocked\", \"pull reddit posts/comments\".",
+      "description": "Pull structured data from Reddit (posts, threads, comments, and question clusters) through a headless browser that bypasses Reddit's JS bot-challenge, and optionally LLM-classify the mined snippets into pain / demand / question gaps with Gemini (when a GEMINI_API_KEY is set; falls back to the in-tool heuristic otherwise). Use when Reddit's public .json API is 403-blocked from a server/cloud IP, or when mining a subreddit for content gaps, questions, pain points, product ideas, or post data. Triggers on \"mine reddit\", \"reddit-miner\", \"scrape subreddit\", \"reddit questions\", \"reddit pain points\", \"reddit product ideas\", \"classify reddit\", \"reddit 403\", \"reddit blocked\", \"pull reddit posts/comments\".",
       "source": "./plugins/marketing-reddit"
     },
     {
