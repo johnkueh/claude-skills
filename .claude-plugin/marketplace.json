@@ -147,6 +147,11 @@
       "name": "system-memory-cleanup",
       "description": "Monitor and clean up system resources on macOS. Use when the user wants to check CPU/memory usage, find resource hogs, kill orphaned processes, or free up system resources. Triggers on requests like \"what's using CPU\", \"memory hogs\", \"clean up processes\", \"kill Chrome\", \"system slow\", or \"activity monitor\".",
       "source": "./plugins/system-memory-cleanup"
+    },
+    {
+      "name": "wendy",
+      "description": "Wendy — a personal execution coach built on James Lim's coaching corpus (Strategist vs Performer, first-tentacle, Type 1/2 information and the ping, fear's 5 blindspots, the racehorse environment switch, rehab-dosed exposure, fake progress, runway/planes, high vs low-grade focus). Four modes. (1) ON-DEMAND — invoke whenever the user says they're stuck, blocked, overthinking, spiralling, procrastinating, can't ship, can't start, avoiding something, \"talk me through this\", \"coach me\", \"why am I not doing X\", \"I keep putting off Y\", or asks whether they should keep planning/researching. (2) BACKGROUND — invoke silently whenever helping the user plan work, break down a task, write a roadmap or TODO list, or when they propose more research/courses/refactors before shipping: bias plans toward action, catch fake progress, right-size next steps. (3) DAILY-PLAN CONSULT — invoke when writing, updating, or reviewing the user's daily action list, todo queue, or \"today\" plan: shape items as safe first-tentacles, block fake-progress items. (4) PROJECT-PUSHING — invoke whenever the user floats a new project/feature idea, estimates revenue, asks \"should I build X\", or prioritizes across projects: apply the finish-before-start rule and realistic revenue targets over unicorn projections. Also triggers on \"wendy\", \"ask wendy\", \"what would wendy say\", \"coach\", \"first tentacle\", \"am I fake-progressing\", \"strategist mode\".",
+      "source": "./plugins/wendy"
     }
   ]
 }
