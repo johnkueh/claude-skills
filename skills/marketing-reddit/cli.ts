@@ -246,7 +246,7 @@ class RedditBrowser {
       }
       if (this.timeouts > before)
         throw new BrowserError(
-          `could not reach Reddit — agent-browser timed out ${this.timeouts}× (proxy exit dead/unreachable; test \`curl -x <proxy> https://ipinfo.io/json\` or rerun with --no-proxy)`,
+          `could not reach Reddit — agent-browser timed out ${this.timeouts}× (proxy exit dead/unreachable; test \`curl -x <proxy> https://ipinfo.io/json\` and rotate/fix the proxy)`,
         );
       this.log(`[reddit-miner] still blocked, retry ${attempt}/3`);
       Bun.sleepSync(2000);
@@ -459,7 +459,7 @@ async function cmdDoctor(proxyFlag?: string, noProxy = false): Promise<number> {
   let [proxy, source] = noProxy ? [null, null] : resolveProxy(proxyFlag);
   if (proxy) { const r = rotateSessid(proxy); if (r !== proxy) { proxy = r; source = `${source} (fresh sessid)`; } }
   // proxy is OPTIONAL: present = use it; absent = direct (only works from a clean/residential IP)
-  console.log(`  [INFO] proxy ${proxy ? `configured — ${mask(proxy)} (from ${source})` : "not set — will connect DIRECT (only works from a clean/residential IP; set one via `setup` if you get blocked)"}`);
+  console.log(`  [INFO] proxy ${proxy ? `configured — ${mask(proxy)} (from ${source})` : "not set — direct connection exposes this IP to Reddit and risks a ban; mining requires a proxy (run `setup --proxy <url>`)"}`);
 
   // LLM classification is OPTIONAL: present = the `classify` command uses Gemini
   // (higher recall); absent = `classify` falls back to the heuristic question detector.
@@ -657,15 +657,20 @@ async function main() {
   if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | boolean | undefined, f["gemini-key"] as string | undefined));
   if (cmd === "doctor") process.exit(await cmdDoctor(f.proxy as string | undefined, f["no-proxy"] === true));
 
+  const mining = ["posts", "thread", "mine", "classify"].includes(cmd);
   const noProxy = f["no-proxy"] === true;
   let [proxy, source] = noProxy ? [null, null] : resolveProxy(f.proxy as string | undefined);
+  if (mining && !proxy && !noProxy) {
+    console.error("ERROR: no proxy configured — mining direct risks getting this IP banned by Reddit; run `setup --proxy <url>`, or pass --no-proxy to accept the risk");
+    process.exit(2);
+  }
   if (proxy && f["no-rotate"] !== true) {
     const rotated = rotateSessid(proxy);
     if (rotated !== proxy) { proxy = rotated; source = `${source} (fresh sessid)`; }
   }
   console.error(proxy
     ? `[reddit-miner] proxy from ${source}: ${mask(proxy)}`
-    : "[reddit-miner] no proxy — connecting direct (works only from a clean/residential IP)");
+    : "[reddit-miner] WARNING: --no-proxy — running direct; Reddit sees this IP and the ban risk is yours");
   const topicRx = f["topic-keywords"] ? new RegExp(f["topic-keywords"] as string, "i") : null;
   const keepOpen = !!f["keep-open"];
 

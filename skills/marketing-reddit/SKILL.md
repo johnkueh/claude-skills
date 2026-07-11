@@ -10,8 +10,8 @@ JS bot-challenge to anything automated. The decisive signal is the
 `Chrome/...` UA and headless Chrome passes the challenge. The same-origin in-page
 `fetch()` then carries the clearance cookie and returns real JSON.
 
-This tool drives `agent-browser` (headless) with a clean UA — optionally through a
-residential proxy — clears the challenge once per run, then fetches `.json` via
+This tool drives `agent-browser` (headless) with a clean UA through a
+residential proxy, clears the challenge once per run, then fetches `.json` via
 in-page `fetch()`, metering real wire bytes (proxy bandwidth) and cost. Question
 detection + clustering are ported in-tool (no Python dependency).
 
@@ -31,8 +31,9 @@ effect (this also closes other agent-browser sessions).
 ## Setup
 
 - `bun` installed (https://bun.sh) and `agent-browser` (`npm i -g agent-browser`).
-- **Proxy is optional.** From a clean/residential IP it works direct. From a
-  flagged datacenter/cloud IP (e.g. a CI box) you need a residential proxy.
+- **Proxy is required for mining.** A direct connection exposes your IP to Reddit
+  and risks a ban, so `posts`/`thread`/`mine`/`classify` refuse to run without one;
+  `--no-proxy` is the explicit accept-the-risk override.
 
 ```bash
 # Store a proxy in machine-local config (chmod 600, OUTSIDE the skill repo — repo is public)
@@ -43,7 +44,8 @@ bun ~/.claude/skills/marketing-reddit/cli.ts doctor
 ```
 
 Proxy resolution order: `--proxy` flag → `REDDIT_PROXY` env → `~/.config/reddit-miner/config.json`.
-The proxy secret is never read from or written to the skill repo. Use `--no-proxy` to force direct.
+The proxy secret is never read from or written to the skill repo. Use `--no-proxy` only to
+explicitly accept the ban risk and run direct.
 
 Gemini key resolution (for `classify`): `GEMINI_API_KEY` env → `gemini_key` in
 `~/.config/reddit-miner/config.json` (set via `setup --gemini-key <key>`). Optional — without it
@@ -76,15 +78,15 @@ handling a proxy secret). `<cli>` below is `bun <this-skill-dir>/cli.ts`.
    agent-browser install
    ```
 
-5. **`proxy credential resolved` is INFO, not a failure.** Ask the user: do they
-   have a residential/ISP proxy? Reddit blocks datacenter IPs, so a cloud/CI box
-   needs one; a clean home IP often works direct.
-   - If yes, take the proxy URL and store it for them — never paste it into the repo:
+5. **A proxy is required for mining.** Ask the user for a residential/ISP proxy —
+   mining direct exposes their IP to Reddit and risks a ban, so the mining commands
+   refuse to run without one.
+   - Take the proxy URL and store it for them — never paste it into the repo:
      ```bash
      <cli> setup --proxy "http://user:pass@host:port"
      ```
-   - If no, tell them it'll run direct and only works from a clean IP. They can add
-     a proxy later with `setup`.
+   - If they insist on running without one, `--no-proxy` is the explicit
+     accept-the-risk override — the ban risk is theirs.
 
 6. **`LLM classification` is INFO, not a failure.** If they want pain/demand mining
    (not just questions), set a Gemini key so `classify` uses `gemini-2.5-flash`:
@@ -126,7 +128,7 @@ bun ~/.claude/skills/marketing-reddit/cli.ts classify --subreddit Retatrutide --
 
 `--sort`: `top|hot|new|rising|controversial` (`--time` applies to `top`/`controversial`).
 `--keep-open`: leave the browser session running for inspection.
-`--no-proxy`: force a direct connection even if a proxy is configured.
+`--no-proxy`: run direct without a proxy — explicit accept-the-risk override (exposes your IP to Reddit).
 `--no-rotate`: keep the proxy's stored `sessid` instead of minting a fresh one (see below).
 `classify` flags: `--for "<focus>"` (relevance filter — see below), `--top N` (rows per bucket, default 40),
 `--min-score N` / `--min-comments N` (engagement floor on the posts mined).
