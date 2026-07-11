@@ -188,15 +188,34 @@ function rotateSessid(proxy: string | null): string | null {
 
 class BrowserError extends Error {}
 
+function runAgentBrowser(args: string[], input: string | undefined, timeoutMs: number): { out: string; timedOut: boolean } {
+  const tmp = path.join(os.tmpdir(), `reddit-miner-ab-${process.pid}-${Math.random().toString(36).slice(2)}.out`);
+  const fd = fs.openSync(tmp, "w");
+  let timedOut = false;
+  try {
+    execFileSync("agent-browser", args, {
+      input, stdio: [input !== undefined ? "pipe" : "ignore", fd, fd], timeout: timeoutMs,
+    });
+  } catch (e: any) {
+    if (e?.code === "ETIMEDOUT" || e?.killed === true || e?.signal === "SIGTERM") timedOut = true;
+  } finally {
+    try { fs.closeSync(fd); } catch {}
+  }
+  let out = "";
+  try { out = fs.readFileSync(tmp, "utf8"); } catch {}
+  try { fs.unlinkSync(tmp); } catch {}
+  return { out, timedOut };
+}
+
 class RedditBrowser {
   proxy: string | null; session: string; ua: string; verbose: boolean;
-  wireBytes = 0; decodedBytes = 0; requests = 0; private launched = false;
+  wireBytes = 0; decodedBytes = 0; requests = 0; private launched = false; private timeouts = 0;
   constructor(proxy: string | null, session = SESSION, ua = CLEAN_UA, verbose = true) {
     this.proxy = proxy; this.session = session; this.ua = ua; this.verbose = verbose;
     if (!process.env.AGENT_BROWSER_MAX_OUTPUT) process.env.AGENT_BROWSER_MAX_OUTPUT = "8000000";
   }
   private log(...a: any[]) { if (this.verbose) console.error(...a); }
-  private ab(args: string[], stdin?: string): string {
+  private ab(args: string[], stdin?: string, timeoutMs = 90_000): string {
     // --proxy/--user-agent apply only at daemon launch; pass them on the first `open`
     // only, so later calls don't emit "daemon already running, options ignored".
     const full = ["--session", this.session, ...args];
@@ -205,24 +224,30 @@ class RedditBrowser {
       if (this.proxy) full.splice(2, 0, "--proxy", this.proxy);
       this.launched = true;
     }
-    try {
-      return execFileSync("agent-browser", full, {
-        input: stdin, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 90_000,
-      });
-    } catch (e: any) { return e.stdout ?? ""; }
+    const { out, timedOut } = runAgentBrowser(full, stdin, timeoutMs);
+    if (timedOut) {
+      this.timeouts++;
+      this.log(`[reddit-miner] agent-browser ${args[0]} timed out after ${timeoutMs}ms (dead/unreachable proxy exit or stalled load)`);
+    }
+    return out;
   }
   clear(sub: string) {
     // agent-browser applies --proxy/--user-agent at DAEMON launch; a running daemon
     // ignores them. Kill it so THIS run's UA/proxy actually take effect (the clean UA
     // is what passes Reddit's headless challenge — non-negotiable for correctness).
-    try { execFileSync("agent-browser", ["close", "--all"], { timeout: 30_000 }); } catch {}
+    runAgentBrowser(["close", "--all"], undefined, 30_000);
     for (let attempt = 1; attempt <= 3; attempt++) {
-      this.ab(["open", `https://www.reddit.com/r/${sub}/`]);
-      this.ab(["wait", "3500"]);
-      const body = this.ab(["get", "text", "body"]) || "";
+      const before = this.timeouts;
+      this.ab(["open", `https://www.reddit.com/r/${sub}/`], undefined, 35_000);
+      this.ab(["wait", "3500"], undefined, 30_000);
+      const body = this.ab(["get", "text", "body"], undefined, 30_000) || "";
       if (!body.includes(BLOCK_MARKER) && body.toLowerCase().replace(/\s/g, "").includes("r/" + sub.toLowerCase())) {
         this.log(`[reddit-miner] challenge cleared (attempt ${attempt})`); return;
       }
+      if (this.timeouts > before)
+        throw new BrowserError(
+          `could not reach Reddit — agent-browser timed out ${this.timeouts}× (proxy exit dead/unreachable; test \`curl -x <proxy> https://ipinfo.io/json\` or rerun with --no-proxy)`,
+        );
       this.log(`[reddit-miner] still blocked, retry ${attempt}/3`);
       Bun.sleepSync(2000);
     }
@@ -263,7 +288,7 @@ class RedditBrowser {
       note: "wire_bytes = real proxy-billed bytes (gzip, incl. headers)",
     };
   }
-  close() { try { this.ab(["close"]); } catch {} }
+  close() { try { this.ab(["close"], undefined, 15_000); } catch {} }
 }
 
 // ----------------------------- listing / thread -----------------------------
@@ -401,7 +426,7 @@ function cmdSetup(proxyArg?: string | boolean, geminiArg?: string): number {
   return 0;
 }
 
-async function cmdDoctor(proxyFlag?: string): Promise<number> {
+async function cmdDoctor(proxyFlag?: string, noProxy = false): Promise<number> {
   let ok = true;
   const line = (status: boolean, label: string, detail = "") => {
     if (!status) ok = false;
@@ -431,7 +456,7 @@ async function cmdDoctor(proxyFlag?: string): Promise<number> {
       engineOk ? "ok" : `no browser launched — run: agent-browser install  ${engineErr ? "(" + engineErr + ")" : ""}`);
   }
 
-  let [proxy, source] = resolveProxy(proxyFlag);
+  let [proxy, source] = noProxy ? [null, null] : resolveProxy(proxyFlag);
   if (proxy) { const r = rotateSessid(proxy); if (r !== proxy) { proxy = r; source = `${source} (fresh sessid)`; } }
   // proxy is OPTIONAL: present = use it; absent = direct (only works from a clean/residential IP)
   console.log(`  [INFO] proxy ${proxy ? `configured — ${mask(proxy)} (from ${source})` : "not set — will connect DIRECT (only works from a clean/residential IP; set one via `setup` if you get blocked)"}`);
@@ -460,7 +485,7 @@ async function cmdDoctor(proxyFlag?: string): Promise<number> {
       const ip = info.ip ?? info.query;
       const country = info.country ?? info.country_code ?? "?";
       line(!!ip, "proxy connectivity", ip ? `exit IP ${ip} (${country})` : "no response through proxy");
-    } catch (e) { line(false, "proxy connectivity", String(e)); }
+    } catch (e) { line(false, "proxy connectivity", String(e).replaceAll(proxy, mask(proxy))); }
   }
 
   const rb = new RedditBrowser(proxy, "reddit-miner-doctor", CLEAN_UA, false);
@@ -630,7 +655,7 @@ async function main() {
   const f = parseFlags(rest);
 
   if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | boolean | undefined, f["gemini-key"] as string | undefined));
-  if (cmd === "doctor") process.exit(await cmdDoctor(f.proxy as string | undefined));
+  if (cmd === "doctor") process.exit(await cmdDoctor(f.proxy as string | undefined, f["no-proxy"] === true));
 
   const noProxy = f["no-proxy"] === true;
   let [proxy, source] = noProxy ? [null, null] : resolveProxy(f.proxy as string | undefined);
