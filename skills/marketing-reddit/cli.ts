@@ -14,7 +14,7 @@
  * ported in-tool, so there is no Python dependency.
  *
  * Commands:
- *   reddit-miner setup   [--proxy <url>]
+ *   reddit-miner setup   [--proxy <url>] [--usd-per-gb <rate>]
  *   reddit-miner doctor
  *   reddit-miner posts   --subreddit <s> [--sort top|hot|new|rising] [--time month] [--limit 30]
  *   reddit-miner thread  --url <permalink> [--limit 500]
@@ -24,7 +24,11 @@
  * config (~/.config/reddit-miner/config.json). The proxy secret is NEVER read
  * from or written to the skill repo (which is public).
  *
- * Env: REDDIT_PROXY, REDDIT_MINER_UA, REDDIT_PROXY_USD_PER_GB (default 8)
+ * Env: REDDIT_PROXY, REDDIT_MINER_UA, REDDIT_PROXY_USD_PER_GB
+ *
+ * Bandwidth rate resolution: REDDIT_PROXY_USD_PER_GB env, then config
+ * `usd_per_gb` (`setup --usd-per-gb <rate>`), then the $8/GB default. Providers
+ * differ by ~8x, so the printed cost is only as good as this rate.
  */
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -35,7 +39,7 @@ const CLEAN_UA =
   process.env.REDDIT_MINER_UA ??
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
     "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
-const USD_PER_GB = parseFloat(process.env.REDDIT_PROXY_USD_PER_GB ?? "8");
+const USD_PER_GB_DEFAULT = 8;
 const CONFIG_PATH = path.join(os.homedir(), ".config", "reddit-miner", "config.json");
 const SESSION = "reddit-miner";
 const BLOCK_MARKER = "blocked by network security";
@@ -173,6 +177,14 @@ function resolveProxy(flag?: string): [string | null, string | null] {
 }
 const mask = (p: string | null) => (p ?? "").replace(/(\/\/[^:]+:)[^@]+(@)/, "$1***$2");
 
+function resolveUsdPerGb(): number {
+  const env = parseFloat(process.env.REDDIT_PROXY_USD_PER_GB ?? "");
+  if (Number.isFinite(env) && env > 0) return env;
+  const cfg = parseFloat(String(loadConfig().usd_per_gb ?? ""));
+  if (Number.isFinite(cfg) && cfg > 0) return cfg;
+  return USD_PER_GB_DEFAULT;
+}
+
 // Sticky proxy sessions (Oxylabs `sessid-…`) expire (~10 min) and then fail with
 // SSL/connection errors mid-run. If the proxy URL carries a sessid, mint a FRESH one
 // per process run — stable within the run (same exit IP → clearance cookie holds),
@@ -281,10 +293,11 @@ class RedditBrowser {
   }
   bandwidth() {
     const gb = this.wireBytes / 1e9;
+    const rate = resolveUsdPerGb();
     return {
       requests: this.requests, wire_bytes: this.wireBytes,
       wire_mb: +(this.wireBytes / 1e6).toFixed(3), decoded_mb: +(this.decodedBytes / 1e6).toFixed(3),
-      usd_per_gb: USD_PER_GB, est_cost_usd: +(gb * USD_PER_GB).toFixed(6),
+      usd_per_gb: rate, est_cost_usd: +(gb * rate).toFixed(6),
       note: "wire_bytes = real proxy-billed bytes (gzip, incl. headers)",
     };
   }
@@ -398,7 +411,7 @@ function probeCommand(cmd: string, args: string[] = ["--version"]): ProbeResult 
   return { status: "ok", path: cmdPath, detail: cmdPath };
 }
 
-function cmdSetup(proxyArg?: string | boolean, geminiArg?: string): number {
+function cmdSetup(proxyArg?: string | boolean, geminiArg?: string, usdArg?: string): number {
   const cfg = loadConfig();
   const saved: string[] = [];
 
@@ -414,8 +427,15 @@ function cmdSetup(proxyArg?: string | boolean, geminiArg?: string): number {
   // gemini key: enables the LLM `classify` path. Stored machine-local, never the repo.
   if (typeof geminiArg === "string" && geminiArg) { cfg.gemini_key = geminiArg; saved.push(`gemini_key ${geminiArg.slice(0, 6)}…`); }
 
+  // proxy bandwidth rate: providers differ by ~8x, so the printed cost is only as good as this.
+  if (typeof usdArg === "string" && usdArg) {
+    const rate = parseFloat(usdArg);
+    if (!Number.isFinite(rate) || rate <= 0) { console.error("ERROR: --usd-per-gb must be a positive number"); return 2; }
+    cfg.usd_per_gb = rate; saved.push(`usd_per_gb ${rate}`);
+  }
+
   if (!saved.length) {
-    console.error("ERROR: nothing to set. Pass --proxy <url> and/or --gemini-key <key>."); return 2;
+    console.error("ERROR: nothing to set. Pass --proxy <url>, --usd-per-gb <rate> and/or --gemini-key <key>."); return 2;
   }
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
@@ -654,7 +674,7 @@ async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   const f = parseFlags(rest);
 
-  if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | boolean | undefined, f["gemini-key"] as string | undefined));
+  if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | boolean | undefined, f["gemini-key"] as string | undefined, f["usd-per-gb"] as string | undefined));
   if (cmd === "doctor") process.exit(await cmdDoctor(f.proxy as string | undefined, f["no-proxy"] === true));
 
   const mining = ["posts", "thread", "mine", "classify"].includes(cmd);

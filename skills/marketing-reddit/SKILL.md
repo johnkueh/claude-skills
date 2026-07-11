@@ -186,7 +186,9 @@ Every run also prints a one-line bandwidth/cost summary to stderr.
 ## Bandwidth & cost
 
 `bandwidth` reports real wire bytes (`transferSize`, post-gzip, incl. headers) — what
-a metered proxy bills. Set `REDDIT_PROXY_USD_PER_GB` (default 8) for cost estimates.
+a metered proxy bills. The rate resolves from `REDDIT_PROXY_USD_PER_GB`, then
+`setup --usd-per-gb <rate>` (persisted to config), then a default of 8. Providers differ
+by ~8x ($1–8/GB), so set it to yours or the printed cost is wrong.
 Reference: a 30-thread `mine` ≈ **1 MB wire ≈ $0.008** at $8/GB (~955 runs per GB).
 
 `classify` adds Gemini cost on top: `gemini-2.5-flash` ≈ **$0.000027 per classified unit**
