@@ -14,7 +14,7 @@
  * ported in-tool, so there is no Python dependency.
  *
  * Commands:
- *   reddit-miner setup   [--proxy <url>]
+ *   reddit-miner setup   [--proxy <url>] [--usd-per-gb <rate>]
  *   reddit-miner doctor
  *   reddit-miner posts   --subreddit <s> [--sort top|hot|new|rising] [--time month] [--limit 30]
  *   reddit-miner thread  --url <permalink> [--limit 500]
@@ -24,7 +24,11 @@
  * config (~/.config/reddit-miner/config.json). The proxy secret is NEVER read
  * from or written to the skill repo (which is public).
  *
- * Env: REDDIT_PROXY, REDDIT_MINER_UA, REDDIT_PROXY_USD_PER_GB (default 8)
+ * Env: REDDIT_PROXY, REDDIT_MINER_UA, REDDIT_PROXY_USD_PER_GB
+ *
+ * Bandwidth rate resolution: REDDIT_PROXY_USD_PER_GB env, then config
+ * `usd_per_gb` (`setup --usd-per-gb <rate>`), then the $8/GB default. Providers
+ * differ by ~8x, so the printed cost is only as good as this rate.
  */
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -35,7 +39,7 @@ const CLEAN_UA =
   process.env.REDDIT_MINER_UA ??
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
     "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
-const USD_PER_GB = parseFloat(process.env.REDDIT_PROXY_USD_PER_GB ?? "8");
+const USD_PER_GB_DEFAULT = 8;
 const CONFIG_PATH = path.join(os.homedir(), ".config", "reddit-miner", "config.json");
 const SESSION = "reddit-miner";
 const BLOCK_MARKER = "blocked by network security";
@@ -173,6 +177,14 @@ function resolveProxy(flag?: string): [string | null, string | null] {
 }
 const mask = (p: string | null) => (p ?? "").replace(/(\/\/[^:]+:)[^@]+(@)/, "$1***$2");
 
+function resolveUsdPerGb(): number {
+  const env = parseFloat(process.env.REDDIT_PROXY_USD_PER_GB ?? "");
+  if (Number.isFinite(env) && env > 0) return env;
+  const cfg = parseFloat(String(loadConfig().usd_per_gb ?? ""));
+  if (Number.isFinite(cfg) && cfg > 0) return cfg;
+  return USD_PER_GB_DEFAULT;
+}
+
 // Sticky proxy sessions (Oxylabs `sessid-…`) expire (~10 min) and then fail with
 // SSL/connection errors mid-run. If the proxy URL carries a sessid, mint a FRESH one
 // per process run — stable within the run (same exit IP → clearance cookie holds),
@@ -188,15 +200,34 @@ function rotateSessid(proxy: string | null): string | null {
 
 class BrowserError extends Error {}
 
+function runAgentBrowser(args: string[], input: string | undefined, timeoutMs: number): { out: string; timedOut: boolean } {
+  const tmp = path.join(os.tmpdir(), `reddit-miner-ab-${process.pid}-${Math.random().toString(36).slice(2)}.out`);
+  const fd = fs.openSync(tmp, "w");
+  let timedOut = false;
+  try {
+    execFileSync("agent-browser", args, {
+      input, stdio: [input !== undefined ? "pipe" : "ignore", fd, fd], timeout: timeoutMs,
+    });
+  } catch (e: any) {
+    if (e?.code === "ETIMEDOUT" || e?.killed === true || e?.signal === "SIGTERM") timedOut = true;
+  } finally {
+    try { fs.closeSync(fd); } catch {}
+  }
+  let out = "";
+  try { out = fs.readFileSync(tmp, "utf8"); } catch {}
+  try { fs.unlinkSync(tmp); } catch {}
+  return { out, timedOut };
+}
+
 class RedditBrowser {
   proxy: string | null; session: string; ua: string; verbose: boolean;
-  wireBytes = 0; decodedBytes = 0; requests = 0; private launched = false;
+  wireBytes = 0; decodedBytes = 0; requests = 0; private launched = false; private timeouts = 0;
   constructor(proxy: string | null, session = SESSION, ua = CLEAN_UA, verbose = true) {
     this.proxy = proxy; this.session = session; this.ua = ua; this.verbose = verbose;
     if (!process.env.AGENT_BROWSER_MAX_OUTPUT) process.env.AGENT_BROWSER_MAX_OUTPUT = "8000000";
   }
   private log(...a: any[]) { if (this.verbose) console.error(...a); }
-  private ab(args: string[], stdin?: string): string {
+  private ab(args: string[], stdin?: string, timeoutMs = 90_000): string {
     // --proxy/--user-agent apply only at daemon launch; pass them on the first `open`
     // only, so later calls don't emit "daemon already running, options ignored".
     const full = ["--session", this.session, ...args];
@@ -205,24 +236,30 @@ class RedditBrowser {
       if (this.proxy) full.splice(2, 0, "--proxy", this.proxy);
       this.launched = true;
     }
-    try {
-      return execFileSync("agent-browser", full, {
-        input: stdin, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 90_000,
-      });
-    } catch (e: any) { return e.stdout ?? ""; }
+    const { out, timedOut } = runAgentBrowser(full, stdin, timeoutMs);
+    if (timedOut) {
+      this.timeouts++;
+      this.log(`[reddit-miner] agent-browser ${args[0]} timed out after ${timeoutMs}ms (dead/unreachable proxy exit or stalled load)`);
+    }
+    return out;
   }
   clear(sub: string) {
     // agent-browser applies --proxy/--user-agent at DAEMON launch; a running daemon
     // ignores them. Kill it so THIS run's UA/proxy actually take effect (the clean UA
     // is what passes Reddit's headless challenge — non-negotiable for correctness).
-    try { execFileSync("agent-browser", ["close", "--all"], { timeout: 30_000 }); } catch {}
+    runAgentBrowser(["close", "--all"], undefined, 30_000);
     for (let attempt = 1; attempt <= 3; attempt++) {
-      this.ab(["open", `https://www.reddit.com/r/${sub}/`]);
-      this.ab(["wait", "3500"]);
-      const body = this.ab(["get", "text", "body"]) || "";
+      const before = this.timeouts;
+      this.ab(["open", `https://www.reddit.com/r/${sub}/`], undefined, 35_000);
+      this.ab(["wait", "3500"], undefined, 30_000);
+      const body = this.ab(["get", "text", "body"], undefined, 30_000) || "";
       if (!body.includes(BLOCK_MARKER) && body.toLowerCase().replace(/\s/g, "").includes("r/" + sub.toLowerCase())) {
         this.log(`[reddit-miner] challenge cleared (attempt ${attempt})`); return;
       }
+      if (this.timeouts > before)
+        throw new BrowserError(
+          `could not reach Reddit — agent-browser timed out ${this.timeouts}× (proxy exit dead/unreachable; test \`curl -x <proxy> https://ipinfo.io/json\` and rotate/fix the proxy)`,
+        );
       this.log(`[reddit-miner] still blocked, retry ${attempt}/3`);
       Bun.sleepSync(2000);
     }
@@ -256,14 +293,15 @@ class RedditBrowser {
   }
   bandwidth() {
     const gb = this.wireBytes / 1e9;
+    const rate = resolveUsdPerGb();
     return {
       requests: this.requests, wire_bytes: this.wireBytes,
       wire_mb: +(this.wireBytes / 1e6).toFixed(3), decoded_mb: +(this.decodedBytes / 1e6).toFixed(3),
-      usd_per_gb: USD_PER_GB, est_cost_usd: +(gb * USD_PER_GB).toFixed(6),
+      usd_per_gb: rate, est_cost_usd: +(gb * rate).toFixed(6),
       note: "wire_bytes = real proxy-billed bytes (gzip, incl. headers)",
     };
   }
-  close() { try { this.ab(["close"]); } catch {} }
+  close() { try { this.ab(["close"], undefined, 15_000); } catch {} }
 }
 
 // ----------------------------- listing / thread -----------------------------
@@ -373,7 +411,7 @@ function probeCommand(cmd: string, args: string[] = ["--version"]): ProbeResult 
   return { status: "ok", path: cmdPath, detail: cmdPath };
 }
 
-function cmdSetup(proxyArg?: string | boolean, geminiArg?: string): number {
+function cmdSetup(proxyArg?: string | boolean, geminiArg?: string, usdArg?: string): number {
   const cfg = loadConfig();
   const saved: string[] = [];
 
@@ -389,8 +427,15 @@ function cmdSetup(proxyArg?: string | boolean, geminiArg?: string): number {
   // gemini key: enables the LLM `classify` path. Stored machine-local, never the repo.
   if (typeof geminiArg === "string" && geminiArg) { cfg.gemini_key = geminiArg; saved.push(`gemini_key ${geminiArg.slice(0, 6)}…`); }
 
+  // proxy bandwidth rate: providers differ by ~8x, so the printed cost is only as good as this.
+  if (typeof usdArg === "string" && usdArg) {
+    const rate = parseFloat(usdArg);
+    if (!Number.isFinite(rate) || rate <= 0) { console.error("ERROR: --usd-per-gb must be a positive number"); return 2; }
+    cfg.usd_per_gb = rate; saved.push(`usd_per_gb ${rate}`);
+  }
+
   if (!saved.length) {
-    console.error("ERROR: nothing to set. Pass --proxy <url> and/or --gemini-key <key>."); return 2;
+    console.error("ERROR: nothing to set. Pass --proxy <url>, --usd-per-gb <rate> and/or --gemini-key <key>."); return 2;
   }
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
@@ -401,7 +446,7 @@ function cmdSetup(proxyArg?: string | boolean, geminiArg?: string): number {
   return 0;
 }
 
-async function cmdDoctor(proxyFlag?: string): Promise<number> {
+async function cmdDoctor(proxyFlag?: string, noProxy = false): Promise<number> {
   let ok = true;
   const line = (status: boolean, label: string, detail = "") => {
     if (!status) ok = false;
@@ -431,10 +476,10 @@ async function cmdDoctor(proxyFlag?: string): Promise<number> {
       engineOk ? "ok" : `no browser launched — run: agent-browser install  ${engineErr ? "(" + engineErr + ")" : ""}`);
   }
 
-  let [proxy, source] = resolveProxy(proxyFlag);
+  let [proxy, source] = noProxy ? [null, null] : resolveProxy(proxyFlag);
   if (proxy) { const r = rotateSessid(proxy); if (r !== proxy) { proxy = r; source = `${source} (fresh sessid)`; } }
   // proxy is OPTIONAL: present = use it; absent = direct (only works from a clean/residential IP)
-  console.log(`  [INFO] proxy ${proxy ? `configured — ${mask(proxy)} (from ${source})` : "not set — will connect DIRECT (only works from a clean/residential IP; set one via `setup` if you get blocked)"}`);
+  console.log(`  [INFO] proxy ${proxy ? `configured — ${mask(proxy)} (from ${source})` : "not set — direct connection exposes this IP to Reddit and risks a ban; mining requires a proxy (run `setup --proxy <url>`)"}`);
 
   // LLM classification is OPTIONAL: present = the `classify` command uses Gemini
   // (higher recall); absent = `classify` falls back to the heuristic question detector.
@@ -460,7 +505,7 @@ async function cmdDoctor(proxyFlag?: string): Promise<number> {
       const ip = info.ip ?? info.query;
       const country = info.country ?? info.country_code ?? "?";
       line(!!ip, "proxy connectivity", ip ? `exit IP ${ip} (${country})` : "no response through proxy");
-    } catch (e) { line(false, "proxy connectivity", String(e)); }
+    } catch (e) { line(false, "proxy connectivity", String(e).replaceAll(proxy, mask(proxy))); }
   }
 
   const rb = new RedditBrowser(proxy, "reddit-miner-doctor", CLEAN_UA, false);
@@ -629,18 +674,23 @@ async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   const f = parseFlags(rest);
 
-  if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | boolean | undefined, f["gemini-key"] as string | undefined));
-  if (cmd === "doctor") process.exit(await cmdDoctor(f.proxy as string | undefined));
+  if (cmd === "setup") process.exit(cmdSetup(f.proxy as string | boolean | undefined, f["gemini-key"] as string | undefined, f["usd-per-gb"] as string | undefined));
+  if (cmd === "doctor") process.exit(await cmdDoctor(f.proxy as string | undefined, f["no-proxy"] === true));
 
+  const mining = ["posts", "thread", "mine", "classify"].includes(cmd);
   const noProxy = f["no-proxy"] === true;
   let [proxy, source] = noProxy ? [null, null] : resolveProxy(f.proxy as string | undefined);
+  if (mining && !proxy && !noProxy) {
+    console.error("ERROR: no proxy configured — mining direct risks getting this IP banned by Reddit; run `setup --proxy <url>`, or pass --no-proxy to accept the risk");
+    process.exit(2);
+  }
   if (proxy && f["no-rotate"] !== true) {
     const rotated = rotateSessid(proxy);
     if (rotated !== proxy) { proxy = rotated; source = `${source} (fresh sessid)`; }
   }
   console.error(proxy
     ? `[reddit-miner] proxy from ${source}: ${mask(proxy)}`
-    : "[reddit-miner] no proxy — connecting direct (works only from a clean/residential IP)");
+    : "[reddit-miner] WARNING: --no-proxy — running direct; Reddit sees this IP and the ban risk is yours");
   const topicRx = f["topic-keywords"] ? new RegExp(f["topic-keywords"] as string, "i") : null;
   const keepOpen = !!f["keep-open"];
 
