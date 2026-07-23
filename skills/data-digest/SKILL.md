@@ -162,7 +162,7 @@ If your project doesn't follow this exact shape, edit `bq_signups`/`bq_costs`/et
 
 ## Troubleshooting
 
-- **`Access Denied: User does not have bigquery.jobs.create permission`** — switch gcloud accounts: `gcloud config set account <email>`. The skill calls `bq` via subprocess, so it inherits whatever account is active.
+- **`Access Denied: User does not have bigquery.jobs.create permission`** — wrong gcloud identity for that project. Pass the right one per call — `CLOUDSDK_CORE_ACCOUNT=<email> <digest command>` (the skill calls `bq` via subprocess, which honors the env var). Don't `gcloud config set account` — it flips the machine-wide default and breaks every other project's crons.
 - **`signups.new_users = 0` but you know there were sign-ups** — verify `events.identifies` is being written; some projects only call `track()` and never `identify()`. In that case, treat first-seen-in-`events.raw` as the signup proxy and add a fetcher.
 - **No files flagged `modified_recently`** — mtime floor is 7 days. If recent edits don't appear, the files might have been touched only in git history, not on the local filesystem (e.g. checkout from a different branch). Run `touch` or widen `INITIATIVES_LOOKBACK`.
 - **x-monitor section says "no runs yet"** — set `X_MONITOR_HOME` to point at the synced folder, or run x-monitor's `setup` + `check` once.
