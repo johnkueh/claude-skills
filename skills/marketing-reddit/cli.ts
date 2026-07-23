@@ -37,7 +37,10 @@ const CLEAN_UA =
     "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
 const USD_PER_GB = parseFloat(process.env.REDDIT_PROXY_USD_PER_GB ?? "8");
 const CONFIG_PATH = path.join(os.homedir(), ".config", "reddit-miner", "config.json");
-const SESSION = "reddit-miner";
+// Per-caller override so parallel callers don't share (and clobber) one daemon —
+// a shared session silently ignores the second caller's --proxy/--user-agent and
+// each run's daemon kill takes down a sibling mid-challenge (2026-07-16..23 outage).
+const SESSION = process.env.REDDIT_MINER_SESSION || "reddit-miner";
 const BLOCK_MARKER = "blocked by network security";
 
 // ----------------------------- NLP: question detection + clustering -----------------------------
@@ -242,8 +245,10 @@ class RedditBrowser {
   private log(...a: any[]) { if (this.verbose) console.error(...a); }
   private killDaemons() {
     // agent-browser applies --proxy/--user-agent at DAEMON launch; a running daemon
-    // ignores them. Kill so the next open picks up a (possibly rotated) proxy + clean UA.
-    try { execFileSync("agent-browser", ["close", "--all"], { timeout: 30_000 }); } catch {}
+    // ignores them. Kill so the next open picks up a (possibly rotated) proxy + clean
+    // UA — but ONLY this caller's session: `close --all` here killed concurrent
+    // miners' in-flight challenge runs (the 2026-07-16..23 outage amplifier).
+    try { execFileSync("agent-browser", ["--session", this.session, "close"], { timeout: 30_000 }); } catch {}
     this.launched = false;
   }
   private ab(args: string[], stdin?: string): string {

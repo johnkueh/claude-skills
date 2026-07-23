@@ -133,6 +133,17 @@ fails every morning until someone hand-rotates. The tool now:
 Stored config is never mutated. `--no-rotate` keeps the configured URL as-is (no
 mint at start; clear still rotates on fail if the vendor shape is known).
 
+## Concurrent callers
+
+The tool drives one agent-browser daemon per session name (default `reddit-miner`)
+and kills its own session's daemon whenever the proxy rotates. Two callers sharing
+the default session interfere: the second caller's `--proxy`/`--user-agent` are
+silently ignored ("daemon already running"), and each caller's daemon kill takes
+down the other's in-flight challenge run — which then looks exactly like a flagged
+proxy pool. When callers can overlap (parallel cron loops), give each its own
+session: `REDDIT_MINER_SESSION=<caller-name>`. Serializing callers with a lock
+works too, but per-session isolation is the fix.
+
 ## Output
 
 - `posts` → `{subreddit, sort, posts: [...], bandwidth}`
