@@ -49,34 +49,9 @@
       "source": "./plugins/data-digest"
     },
     {
-      "name": "dev-expo",
-      "description": "Build Expo IPAs/APKs locally (zero EAS build credits) and deliver them to a phone via Vercel Blob + a per-project drafty \"builds\" canvas with an Install button — works from anywhere, Mac asleep. The skill owns publish-build.sh (Blob upload + OTA manifest + canvas update); each project owns its own `eas build --local` invocation via package.json `:local` scripts whose wrapper also records the dev-client fingerprint for the dev-up skill's expo-qa gate. Triggers on \"publish the build\", \"send build to phone\", \"deliver expo build\", \"install page\", \"builds canvas\", \"expo install URL\", \"publish IPA\", \"ad-hoc install\", \"local eas build\".",
-      "source": "./plugins/dev-expo"
-    },
-    {
-      "name": "dev-flow",
-      "description": "John's master development workflow — the reasoning layer that takes a request from \"go work on X\" to landed-and-verified. Use when John says \"go work on <project>\", names a project plus a task, \"fix this bug\", \"implement this feature\", or fires a ship go-word (\"ship it\", \"do it\", \"let's go\") about a code-change plan. It routes (resolving the project name to its repo), classifies the work as bug/feature/other, drives the right path, decides when confident enough to PR and when to merge, and picks web-vs-OTA-vs-native-rebuild on landing. It REASONS; it never spells mechanical steps — those are deterministic verbs in the per-repo `.workflow.json` contract, called via the `dev-flow` runner (doctor/prep/gate/smoke/gc/pr) and `dev-up`/`dev-down`. Defers to dev-ship for the standing ship authorization itself, and to drafty-proof-canvas for visual proof. Do NOT duplicate those skills.",
-      "source": "./plugins/dev-flow"
-    },
-    {
       "name": "dev-instantdb",
       "description": "Build complete, functional React, vanilla JS, or Expo apps with InstantDB as the realtime backend. Use when the user has explicitly chosen InstantDB, asks for a quick realtime/collaborative prototype, or wants a local-first multiplayer app. Triggers on \"instantdb\", \"instant database\", \"instant.db\", \"realtime collab app\", \"multiplayer prototype\", \"local-first app\", \"build app with instant\", or when the user pastes an InstantDB app ID / schema and asks for an app around it.",
       "source": "./plugins/dev-instantdb"
-    },
-    {
-      "name": "dev-ship",
-      "description": "A standing ship authorization. Use when you say \"ship it\", \"ship this\", \"execute and ship\", or \"ship it to main\" about work planned or discussed in the current session — that is the full no-reconfirmation authorization. ALSO use on a generic go-word (\"execute it\", \"do it\", \"do it now\", \"let's go\", \"go ahead\", \"run it\") about a code-change plan discussed in session whose natural endpoint is shipping — but then follow the Triggers section: confirm scope before merging. It means — execute the agreed plan in a worktree, test and validate everything locally, and if confident there is no regression risk, open a PR and merge it (the merge is the deploy trigger). NOT for go-words about non-shipping work (sending messages, running scripts, drafting), and NOT for product release flows that have their own process and authorization (app-store submissions, OTA releases, package/CLI/plugin version bumps — each a separate authorization).",
-      "source": "./plugins/dev-ship"
-    },
-    {
-      "name": "dev-up",
-      "description": "One-verb local dev-server + worktree QA lifecycle for any checkout (web or Expo), backed by a Cloudflare-Tunnel ngrok replacement that multiplexes many dev servers (via portless) through one wildcard subdomain. Includes `dev-up`/`dev-down`/`dev-status` (env seeding, install, portless naming, public URL), `setup.sh` (one-time machine onboarding), `add-project.sh` (per-project tunnel wiring), `metro-takeover.sh` for switching Expo Metro between git worktrees, `expo-qa.sh` (fingerprint gate that detects when a worktree needs its own dev build or the installed dev client is stale, plus `eas update --branch wt/<branch>` publish for parallel branch QA on any dev client), `worktrees-gc.sh` for pruning landed agent worktrees in any repo, and `doctor.sh` for health-checking the tunnel/portless chain. Formerly named cloudflare-tunnel-portless. Triggers on \"dev-up\", \"spin up the dev server\", \"start the dev server\", \"test before shipping\", \"public URL for this worktree\", \"set up cloudflare tunnel\", \"onboard new mac to tunnel\", \"add project to tunnel\", \"ngrok replacement\", \"public URL for localhost\", \"portless\", \"cloudflared\", \"metro-takeover\", \"switch metro to worktree\", \"expo-qa\", \"fingerprint gate\", \"is the dev client valid for this branch\", \"publish this branch as an EAS update\", \"QA this worktree on my phone\", \"worktrees-gc\", \"clean up worktrees\", \"prune old worktrees\", \"tunnel doctor\", or \"debug caddy/portless/cloudflared\".",
-      "source": "./plugins/dev-up"
-    },
-    {
-      "name": "dev-vercel-logs",
-      "description": "Query Vercel runtime and build logs to debug production issues. PREFER THE CLI over the MCP for log search — the MCP runtime-logs tool truncates message bodies. Use when debugging a production error, investigating a 500 / 4xx, looking at deployment build output, or any 'what happened on Vercel' question. Triggers on 'vercel logs', 'production error', 'vercel debug', 'deployment logs', 'build logs', 'what's failing in prod', 'check vercel'.",
-      "source": "./plugins/dev-vercel-logs"
     },
     {
       "name": "drafty-proof-canvas",
@@ -100,7 +75,7 @@
     },
     {
       "name": "marketing-reddit",
-      "description": "Pull structured data from Reddit (posts, threads, comments, and question clusters) through a headless browser that bypasses Reddit's JS bot-challenge, and optionally LLM-classify the mined snippets into pain / demand / question gaps with Gemini (when a GEMINI_API_KEY is set; falls back to the in-tool heuristic otherwise). Use when Reddit's public .json API is 403-blocked from a server/cloud IP, or when mining a subreddit for content gaps, questions, pain points, product ideas, or post data. Triggers on \"mine reddit\", \"reddit-miner\", \"scrape subreddit\", \"reddit questions\", \"reddit pain points\", \"reddit product ideas\", \"classify reddit\", \"reddit 403\", \"reddit blocked\", \"pull reddit posts/comments\".",
+      "description": "Pull structured data from Reddit (posts, threads, comments, and question clusters) through a headless browser that bypasses Reddit's JS bot-challenge. Use when Reddit's public .json API is 403-blocked from a server/cloud IP, or when mining a subreddit for content gaps, questions, or post data. Triggers on \"mine reddit\", \"reddit-miner\", \"scrape subreddit\", \"reddit questions\", \"reddit 403\", \"reddit blocked\", \"pull reddit posts/comments\".",
       "source": "./plugins/marketing-reddit"
     },
     {

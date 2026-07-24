@@ -4,8 +4,8 @@ description: >
   Publish proof-of-work screenshots to a private drafty canvas so John can eye
   visual results from any device and annotate directly on the images. Use at
   the END of any task whose correctness is visual (UI, layout, component,
-  email render, chart, design) — the proof canvas IS part of the deliverable,
-  required by ~/Projects/CLAUDE.md and dev-ship step 10. NOT for work that
+  email render, chart, design) — the proof canvas IS part of the deliverable.
+  NOT for work that
   merely renders somewhere (README/doc/copy/config changes) — if John doesn't
   need to look at pixels to judge it, skip the canvas.
   Triggers: finishing visual work, "proof canvas", "proof image", "show me",

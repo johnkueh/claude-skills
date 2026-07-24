@@ -49,12 +49,7 @@ These are the ones that earned a permanent spot in my setup. They lean on real k
 
 | Skill | What it does |
 |---|---|
-| [`dev-expo`](skills/dev-expo) | Build an Expo app locally and send the IPA or APK straight to a phone over a Cloudflare tunnel. |
-| [`dev-up`](skills/dev-up) | One-verb dev-server + worktree QA lifecycle (dev-up/dev-down, metro-takeover, expo-qa fingerprint gate + EAS Update publish, worktrees-gc), backed by an ngrok-replacing Cloudflare tunnel. |
-| [`dev-vercel-logs`](skills/dev-vercel-logs) | Query Vercel runtime and build logs to debug production, with full message bodies the dashboard truncates. |
 | [`dev-instantdb`](skills/dev-instantdb) | Build a working React, vanilla JS, or Expo app with InstantDB as a realtime, local-first backend. |
-| [`dev-flow`](skills/dev-flow) | A master dev workflow that routes a request from "go work on X" to landed-and-verified, picking web vs OTA vs native-rebuild on landing. |
-| [`dev-ship`](skills/dev-ship) | A standing ship authorization — execute an agreed plan in a worktree, validate locally, and open/merge a PR when there's no regression risk. |
 | [`drafty-proof-canvas`](skills/drafty-proof-canvas) | Publish proof-of-work screenshots to a drafty.im canvas so you can review and annotate visual results from any device. |
 
 ### Data
